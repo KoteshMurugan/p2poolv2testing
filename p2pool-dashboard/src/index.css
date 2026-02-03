@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #e2e8f0;
+  background-color: #0f172a;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Animations */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.8);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* DAG visualization styles */
+.dag-node {
+  @apply relative rounded-lg p-3 border-2 transition-all duration-200;
+}
+
+.dag-node-confirmed {
+  @apply border-green-500 bg-green-500/10;
+}
+
+.dag-node-tip {
+  @apply border-orange-500 bg-orange-500/10 animate-pulse-glow;
+}
+
+.dag-node-uncle {
+  @apply border-purple-500 bg-purple-500/10;
+}
+
+.dag-connection {
+  stroke: #64748b;
+  stroke-width: 2;
+  fill: none;
+}
+
+.dag-connection-uncle {
+  stroke: #a855f7;
+  stroke-dasharray: 5, 5;
+}
