@@ -227,7 +227,8 @@ impl ShareBlock {
         assert!(
             network == bitcoin::Network::Signet
                 || network == bitcoin::Network::Testnet4
-                || network == bitcoin::Network::Bitcoin,
+                || network == bitcoin::Network::Bitcoin
+                || network == bitcoin::Network::Regtest,
             "Network Testnet and Regtest not yet supported"
         );
         let genesis_data = genesis::genesis_data(network).unwrap();

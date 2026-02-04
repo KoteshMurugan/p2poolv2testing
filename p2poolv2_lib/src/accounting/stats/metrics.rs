@@ -216,9 +216,10 @@ impl MetricsActor {
         self.metrics.lastupdate = Some(current_unix_timestamp);
         self.metrics.best_share = self.metrics.best_share.max(truediff);
         self.metrics.best_share_ever = self.metrics.best_share_ever.max(truediff);
-        if let Some(user) = self.metrics.users.get_mut(&btcaddress) {
-            user.record_share(&workername, difficulty, truediff, current_unix_timestamp);
-        }
+
+        // ✅ FIX: Change "if let Some" to "entry().or_default()"
+        let user = self.metrics.users.entry(btcaddress).or_default();
+        user.record_share(&workername, difficulty, truediff, current_unix_timestamp);
     }
 
     /// Update metrics from rejected share

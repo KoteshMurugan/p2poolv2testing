@@ -42,7 +42,7 @@ const SIGNET_GENESIS_DATA: GenesisData = GenesisData {
 const TESTNET4_GENESIS_DATA: GenesisData = GenesisData {
     public_key: "02ac493f2130ca56cb5c3a559860cef9a84f90b5a85dfe4ec6e6067eeee17f4d2d",
     // for bitcoin blockhash 000000003fba69400bbc385acd52b07dbe7779ea5f8995dd4aadf4a86b74cc55
-    bitcoin_block_hex: "",
+    bitcoin_block_hex: include!("testnet4.rs"),
 };
 
 // Using the following JSON data for the genesis block
@@ -52,6 +52,10 @@ const MAINNET_GENESIS_DATA: GenesisData = GenesisData {
     // header in hex "00a06f239cf5fe7a514fd6f9e64d77cd2345cf225ee3fe9b75bf00000000000000000000923435bf0a5f91886f7f94ade677752a526dec905eef07d181893faf15113a75b039fb6821eb01173c0137da"
     bitcoin_block_hex: include!("main.rs"),
 };
+const REGTEST_GENESIS_DATA: GenesisData = GenesisData {
+    public_key: "02ac493f2130ca56cb5c3a559860cef9a84f90b5a85dfe4ec6e6067eeee17f4d2d",
+    bitcoin_block_hex: include!("regtest.rs"),
+};
 
 /// Get the genesis data for a given network
 pub fn genesis_data(network: bitcoin::Network) -> Result<GenesisData, Box<dyn Error>> {
@@ -59,6 +63,7 @@ pub fn genesis_data(network: bitcoin::Network) -> Result<GenesisData, Box<dyn Er
         bitcoin::Network::Signet => Ok(SIGNET_GENESIS_DATA),
         bitcoin::Network::Testnet4 => Ok(TESTNET4_GENESIS_DATA),
         bitcoin::Network::Bitcoin => Ok(MAINNET_GENESIS_DATA),
+        bitcoin::Network::Regtest => Ok(REGTEST_GENESIS_DATA),
         _ => Err("Unsupported network".into()),
     }
 }

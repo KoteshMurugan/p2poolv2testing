@@ -1,15 +1,13 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+
 import './App.css'
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import BlockchainView from './components/BlockchainView';
-import WorkersTable from './components/WorkersTable';
-import SharesTable from './components/SharesTable';
-import RocksDBViewer from './components/RocksDBViewer';
+import Layout from './components/Layout.tsx';
+import Dashboard from './components/Dashboard.tsx';
+import BlockchainView from './components/BlockchainView.tsx';
+import WorkersTable from './components/WorkersTable.tsx';
+import SharesTable from './components/SharesTable.tsx';
+import RocksDBViewer from './components/RocksDBViewer.tsx';
 
 function App() {
   return (

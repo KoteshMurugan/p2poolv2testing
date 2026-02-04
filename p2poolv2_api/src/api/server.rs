@@ -18,7 +18,7 @@ use crate::api::auth::auth_middleware;
 use crate::api::error::ApiError;
 use axum::{
     Extension, Json, Router,
-    extract::{FromRef, Query, State},
+    extract::{FromRef, Path, Query, State},
     middleware::{self},
     routing::get,
 };
@@ -29,7 +29,7 @@ use p2poolv2_lib::{
     config::ApiConfig,
     shares::chain::chain_store_handle::ChainStoreHandle,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::oneshot;
 use tracing::info;
@@ -66,6 +66,162 @@ pub struct PplnsQuery {
     end_time: Option<String>,
 }
 
+// ============================================================================
+// Chain API Response Structs
+// ============================================================================
+
+#[derive(Serialize)]
+pub struct ChainTipResponse {
+    pub tip: String,
+}
+
+#[derive(Serialize)]
+pub struct ChainHeightResponse {
+    pub height: Option<u32>,
+}
+
+#[derive(Serialize)]
+pub struct ChainTipWithUnclesResponse {
+    pub tip: String,
+    pub uncles: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct SharesAtHeightResponse {
+    pub height: u32,
+    pub shares: Vec<ShareInfo>,
+}
+
+#[derive(Serialize)]
+pub struct ShareInfo {
+    pub blockhash: String,
+    pub prev_share_blockhash: String,
+}
+
+#[derive(Serialize)]
+pub struct TotalWorkResponse {
+    pub total_work: String,
+}
+
+#[derive(Serialize)]
+pub struct ChainLocatorResponse {
+    pub locator: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct ChainInfoResponse {
+    pub tip: String,
+    pub height: Option<u32>,
+    pub total_work: String,
+    pub uncles: Vec<String>,
+    pub network: String,
+}
+
+// ============================================================================
+// Chain API Handlers
+// ============================================================================
+
+async fn chain_tip(State(state): State<Arc<AppState>>) -> Json<ChainTipResponse> {
+    let tip = state.chain_store_handle.get_chain_tip();
+    Json(ChainTipResponse {
+        tip: tip.to_string(),
+    })
+}
+
+async fn chain_height(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ChainHeightResponse>, ApiError> {
+    let height = state
+        .chain_store_handle
+        .get_tip_height()
+        .map_err(|e| ApiError::ServerError(e.to_string()))?;
+    Ok(Json(ChainHeightResponse { height }))
+}
+
+async fn chain_tip_with_uncles(
+    State(state): State<Arc<AppState>>,
+) -> Json<ChainTipWithUnclesResponse> {
+    let (tip, uncles) = state.chain_store_handle.get_chain_tip_and_uncles();
+    Json(ChainTipWithUnclesResponse {
+        tip: tip.to_string(),
+        uncles: uncles.iter().map(|u| u.to_string()).collect(),
+    })
+}
+
+async fn shares_at_height(
+    State(state): State<Arc<AppState>>,
+    Path(height): Path<u32>,
+) -> Result<Json<SharesAtHeightResponse>, ApiError> {
+    let shares = state
+        .chain_store_handle
+        .get_shares_at_height(height)
+        .map_err(|e| ApiError::ServerError(e.to_string()))?;
+
+    let share_infos: Vec<ShareInfo> = shares
+        .iter()
+        .map(|(hash, share)| ShareInfo {
+            blockhash: hash.to_string(),
+            prev_share_blockhash: share.header.prev_share_blockhash.to_string(),
+        })
+        .collect();
+
+    Ok(Json(SharesAtHeightResponse {
+        height,
+        shares: share_infos,
+    }))
+}
+
+async fn total_work(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<TotalWorkResponse>, ApiError> {
+    let work = state
+        .chain_store_handle
+        .get_total_work()
+        .map_err(|e| ApiError::ServerError(e.to_string()))?;
+    Ok(Json(TotalWorkResponse {
+        total_work: format!("{:x}", work),
+    }))
+}
+
+async fn chain_locator(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ChainLocatorResponse>, ApiError> {
+    let locator = state
+        .chain_store_handle
+        .build_locator()
+        .map_err(|e| ApiError::ServerError(e.to_string()))?;
+    Ok(Json(ChainLocatorResponse {
+        locator: locator.iter().map(|h| h.to_string()).collect(),
+    }))
+}
+
+async fn chain_info(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ChainInfoResponse>, ApiError> {
+    let tip = state.chain_store_handle.get_chain_tip();
+    let height = state
+        .chain_store_handle
+        .get_tip_height()
+        .map_err(|e| ApiError::ServerError(e.to_string()))?;
+    let total_work = state
+        .chain_store_handle
+        .get_total_work()
+        .map_err(|e| ApiError::ServerError(e.to_string()))?;
+    let (_, uncles) = state.chain_store_handle.get_chain_tip_and_uncles();
+
+    Ok(Json(ChainInfoResponse {
+        tip: tip.to_string(),
+        height,
+        total_work: format!("{:x}", total_work),
+        uncles: uncles.iter().map(|u| u.to_string()).collect(),
+        network: state.app_config.network.to_string(),
+    }))
+}
+
+// ============================================================================
+// Server Setup
+// ============================================================================
+
 /// Start the API server and return a shutdown channel
 pub async fn start_api_server(
     config: ApiConfig,
@@ -94,10 +250,21 @@ pub async fn start_api_server(
         std::net::IpAddr::V4(config.hostname.parse().unwrap()),
         config.port,
     );
+
     let app = Router::new()
+        // Health and metrics
         .route("/health", get(health_check))
         .route("/metrics", get(metrics))
         .route("/pplns_shares", get(pplns_shares))
+        // Chain endpoints
+        .route("/chain/tip", get(chain_tip))
+        .route("/chain/height", get(chain_height))
+        .route("/chain/tip_with_uncles", get(chain_tip_with_uncles))
+        .route("/chain/shares/{height}", get(shares_at_height))
+        .route("/chain/total_work", get(total_work))
+        .route("/chain/locator", get(chain_locator))
+        .route("/chain/info", get(chain_info))
+        // Middleware and state
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             auth_middleware,
@@ -192,7 +359,6 @@ async fn pplns_shares(
 
     Ok(Json(shares))
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
