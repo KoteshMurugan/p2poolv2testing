@@ -29,7 +29,7 @@ use tracing::debug;
 pub async fn handle_subscribe<'a, D: DifficultyAdjusterTrait>(
     message: SimpleRequest<'a>,
     session: &mut Session<D>,
-    start_difficulty: u64,
+    start_difficulty: f64,
 ) -> Result<Vec<Message<'a>>, Error> {
     debug!("Handling mining.subscribe message");
     if session.subscribed {
@@ -67,11 +67,11 @@ mod tests {
     async fn test_handle_subscribe_success() {
         // Setup
         let message = SimpleRequest::new_subscribe(1, "UA".to_string(), "v1.0".to_string(), None);
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         session.subscribed = false;
 
         // Execute
-        let response = handle_subscribe(message, &mut session, 1000).await;
+        let response = handle_subscribe(message, &mut session, 1000.0).await;
 
         // Verify
         assert!(response.is_ok());
@@ -125,7 +125,7 @@ mod tests {
             "Expected method to be 'mining.set_difficulty'"
         );
         assert_eq!(
-            difficulty_notification.params[0], 1000,
+            difficulty_notification.params[0], 1000.00,
             "Expected difficulty notification to match pool minimum difficulty"
         );
     }
@@ -134,11 +134,11 @@ mod tests {
     async fn test_handle_subscribe_already_subscribed() {
         // Setup
         let message = SimpleRequest::new_subscribe(1, "UA".to_string(), "v1.0".to_string(), None);
-        let mut session = Session::<DifficultyAdjuster>::new(2, 2, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(2.0, 2.0, None, 0x1fffe000);
         session.subscribed = true;
 
         // Execute
-        let response = handle_subscribe(message, &mut session, 1000).await;
+        let response = handle_subscribe(message, &mut session, 1000.0).await;
 
         // Verify
         assert!(response.is_err());

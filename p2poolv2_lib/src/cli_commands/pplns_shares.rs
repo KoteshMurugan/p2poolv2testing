@@ -43,7 +43,7 @@ pub fn execute(
     let share_infos: Vec<PplnsShareInfo> = shares
         .into_iter()
         .map(|share| PplnsShareInfo {
-            difficulty: share.difficulty,
+            difficulty: share.difficulty as u64,
             btcaddress: share.btcaddress.unwrap_or_default(),
             workername: share.workername.unwrap_or_default(),
             timestamp: share.n_time,

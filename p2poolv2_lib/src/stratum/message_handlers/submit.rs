@@ -128,7 +128,7 @@ pub(crate) async fn handle_submit<'a, D: DifficultyAdjusterTrait>(
         .as_secs();
     let stratum_share = SimplePplnsShare::new(
         session.user_id.unwrap(),
-        session.difficulty_adjuster.get_current_difficulty(),
+        session.difficulty_adjuster.get_current_difficulty() as u64,
         session.btcaddress.clone().unwrap_or_default(),
         session.workername.clone().unwrap_or_default(),
         timestamp,

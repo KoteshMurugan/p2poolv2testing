@@ -48,7 +48,7 @@ pub struct SimplePplnsShare {
 impl SimplePplnsShare {
     pub fn new(
         user_id: u64,
-        difficulty: f64,
+        difficulty: u64,
         btcaddress: String,
         workername: String,
         n_time: u64,

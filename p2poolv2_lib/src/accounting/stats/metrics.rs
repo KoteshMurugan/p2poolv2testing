@@ -286,7 +286,7 @@ impl MetricsHandle {
             .send(MetricsMessage::RecordShareAccepted {
                 btcaddress: share.btcaddress.unwrap_or_default(),
                 workername: share.workername.unwrap_or_default(),
-                difficulty: share.difficulty,
+                difficulty: share.difficulty as u64,
                 truediff,
                 response: response_tx,
             })
