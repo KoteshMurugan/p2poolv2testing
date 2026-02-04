@@ -99,7 +99,7 @@ pub fn validate_submission_difficulty(
     submission: &SimpleRequest<'_>,
     enonce1_hex: &str,
     version_mask: i32,
-    _session_difficulty: u64,
+    _session_difficulty: f64,
     _network: bitcoin::Network,
 ) -> Result<ValidationResult, Error> {
     let compact_target = bitcoin::CompactTarget::from_unprefixed_hex(&job.blocktemplate.bits)

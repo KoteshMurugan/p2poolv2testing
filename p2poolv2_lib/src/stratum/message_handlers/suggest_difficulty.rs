@@ -33,7 +33,7 @@ pub async fn handle_suggest_difficulty<'a, D: DifficultyAdjusterTrait>(
         Some(param) => {
             let difficulty = session
                 .difficulty_adjuster
-                .apply_difficulty_constraints(*param, Some(*param));
+                .apply_difficulty_constraints(*param as f64, Some(*param as f64));
             session.suggested_difficulty = Some(difficulty);
             session
                 .difficulty_adjuster

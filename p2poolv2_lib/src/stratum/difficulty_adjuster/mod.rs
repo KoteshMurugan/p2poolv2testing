@@ -135,7 +135,7 @@ pub trait DifficultyAdjusterTrait {
 
     /// Update the DSPS (Difficulty Shares Per Second) metrics using exponential decay
     fn apply_difficulty_constraints(&self, new_diff: f64, suggested_difficulty: Option<f64>)
-    -> u64;
+    -> f64;
 
     /// Convert a u128 value to u64, saturating at u64::MAX if the value exceeds it.
     #[inline]
