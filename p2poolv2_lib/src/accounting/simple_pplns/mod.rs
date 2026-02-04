@@ -28,7 +28,7 @@ pub struct SimplePplnsShare {
     /// Local node user id, used for tracking local pplns
     pub user_id: u64,
     /// Target difficulty when the share was found
-    pub difficulty: f64,
+    pub difficulty: u64,
     /// btcaddress of the miner, used to track metrics for local node
     #[serde(skip)]
     pub btcaddress: Option<String>,

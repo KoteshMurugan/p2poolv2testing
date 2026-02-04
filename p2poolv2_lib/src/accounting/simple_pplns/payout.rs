@@ -200,7 +200,7 @@ impl Payout {
             if let Some(btcaddress) = &share.btcaddress {
                 *address_difficulty_map
                     .entry(btcaddress.clone())
-                    .or_insert(0.00) += share.difficulty;
+                    .or_insert(0) += share.difficulty;
             }
         }
         address_difficulty_map
