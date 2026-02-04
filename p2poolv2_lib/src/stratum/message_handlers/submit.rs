@@ -153,7 +153,7 @@ pub(crate) async fn handle_submit<'a, D: DifficultyAdjusterTrait>(
 
     // If we are in testing mode and ignoring difficulty, accept share as meeting current difficulty
     let meets_session_difficulty = stratum_context.ignore_difficulty
-        || truediff >= session.difficulty_adjuster.get_current_difficulty() as u128;
+        || truediff as f64 >= session.difficulty_adjuster.get_current_difficulty();
 
     if meets_session_difficulty {
         let _ = stratum_context

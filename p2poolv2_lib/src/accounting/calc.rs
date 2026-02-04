@@ -44,7 +44,7 @@ pub fn time_bias(time_difference: f64, period: f64) -> f64 {
 
 /// Apply time decay to difficulty per share based elapsed time since last change,
 /// the interval we are decaying for and the incoming new difficulty value
-pub fn decay_time(dsps: f64, difficulty: u64, elapsed_time: f64, interval: u64) -> f64 {
+pub fn decay_time(dsps: f64, difficulty: f64, elapsed_time: f64, interval: u64) -> f64 {
     // Handle edge cases that could cause NaN or Infinity
     if elapsed_time <= 0.0 || !elapsed_time.is_finite() {
         return dsps; // Return the current value unchanged for invalid elapsed_time

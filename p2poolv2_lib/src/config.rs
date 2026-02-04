@@ -41,11 +41,11 @@ pub struct StratumConfig<State = Raw> {
     /// The port for the Stratum server
     pub port: u16,
     /// The start difficulty for all miners that connect to the server
-    pub start_difficulty: u64,
+    pub start_difficulty: f64,
     /// The minimum difficulty for the pool
-    pub minimum_difficulty: u64,
+    pub minimum_difficulty: f64,
     /// The maximum difficulty for the pool, if set to None, it is not enforced
-    pub maximum_difficulty: Option<u64>,
+    pub maximum_difficulty: Option<f64>,
     /// The address for solo mining payouts
     pub solo_address: Option<String>,
     /// The ZMQ publisher address for block hashes
@@ -162,9 +162,9 @@ impl StratumConfig<Raw> {
         StratumConfig {
             hostname: "127.0.0.1".to_string(),
             port: 3333,
-            start_difficulty: 1,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(1000),
+            start_difficulty: 1.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(1000.00),
             solo_address: None,
             zmqpubhashblock: "tcp://127.0.0.1:28332".to_string(),
             bootstrap_address: "tb1qyazxde6558qj6z3d9np5e6msmrspwpf6k0qggk".to_string(),
@@ -416,17 +416,17 @@ impl Config {
         self
     }
 
-    pub fn with_start_difficulty(mut self, start_difficulty: u64) -> Self {
+    pub fn with_start_difficulty(mut self, start_difficulty: f64) -> Self {
         self.stratum.start_difficulty = start_difficulty;
         self
     }
 
-    pub fn with_minimum_difficulty(mut self, minimum_difficulty: u64) -> Self {
+    pub fn with_minimum_difficulty(mut self, minimum_difficulty: f64) -> Self {
         self.stratum.minimum_difficulty = minimum_difficulty;
         self
     }
 
-    pub fn with_maximum_difficulty(mut self, maximum_difficulty: Option<u64>) -> Self {
+    pub fn with_maximum_difficulty(mut self, maximum_difficulty: Option<f64>) -> Self {
         self.stratum.maximum_difficulty = maximum_difficulty;
         self
     }
@@ -520,9 +520,9 @@ mod tests {
             .with_stratum_solo_address("bcrt1qe2qaq0e8qlp425pxytrakala7725dynwhknufr".to_string())
             .with_stratum_zmqpubhashblock("tcp://127.0.0.1:28332".to_string())
             .with_stratum_bootstrap_address("bcrt1qxyz123example456bitcoin789address".to_string())
-            .with_start_difficulty(1)
-            .with_minimum_difficulty(1)
-            .with_maximum_difficulty(Some(100))
+            .with_start_difficulty(1.0)
+            .with_minimum_difficulty(1.0)
+            .with_maximum_difficulty(Some(100.0))
             .with_difficulty_multiplier(2.0)
             .with_ignore_difficulty(Some(true))
             .with_miner_pubkey(
@@ -547,9 +547,9 @@ mod tests {
 
         assert_eq!(config.stratum.hostname, "stratum.example.com");
         assert_eq!(config.stratum.port, 3333);
-        assert_eq!(config.stratum.start_difficulty, 1);
-        assert_eq!(config.stratum.minimum_difficulty, 1);
-        assert_eq!(config.stratum.maximum_difficulty, Some(100));
+        assert_eq!(config.stratum.start_difficulty, 1.0);
+        assert_eq!(config.stratum.minimum_difficulty, 1.0);
+        assert_eq!(config.stratum.maximum_difficulty, Some(100.0));
         assert_eq!(config.stratum.difficulty_multiplier, 2.0);
         assert!(config.stratum.ignore_difficulty.unwrap());
         assert_eq!(

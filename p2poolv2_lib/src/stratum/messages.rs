@@ -178,7 +178,7 @@ pub struct Notify {
 pub struct SetDifficultyNotification<'a> {
     #[serde(borrow)]
     pub method: Cow<'a, str>,
-    pub params: Vec<u64>,
+    pub params: Vec<f64>,
 }
 
 /// NotifyParams represents the parameters for the mining.notify message
@@ -348,7 +348,7 @@ impl<'a> MiningConfigure<'a> {
 impl Response<'_> {
     pub fn new_set_difficulty_response(
         id: Option<Id>,
-        difficulty: u64,
+        difficulty: f64,
         extra_nonce: String,
         extra_nonce_size: u8,
     ) -> Self {
@@ -400,7 +400,7 @@ impl Notify {
 
 impl SetDifficultyNotification<'_> {
     /// Creates a new set_difficulty notification with the given parameters
-    pub fn new(difficulty: u64) -> Self {
+    pub fn new(difficulty: f64) -> Self {
         SetDifficultyNotification {
             method: Cow::Borrowed("mining.set_difficulty"),
             params: vec![difficulty],
@@ -574,7 +574,7 @@ mod tests {
         // Test with numeric ID
         let response = Response::new_set_difficulty_response(
             Some(Id::Number(123)),
-            500,
+            500.0,
             "extranonce_value".to_string(),
             8,
         );
@@ -588,7 +588,7 @@ mod tests {
         // Test with string ID
         let response = Response::new_set_difficulty_response(
             Some(Id::String("test-id".to_string())),
-            1000,
+            1000.0,
             "nonce42".to_string(),
             4,
         );
@@ -601,7 +601,7 @@ mod tests {
 
     #[test]
     fn test_new_set_difficulty_notification() {
-        let message = SetDifficultyNotification::new(1000);
+        let message = SetDifficultyNotification::new(1000.0);
         let serialized_message = serde_json::to_string(&message).unwrap();
         assert_eq!(
             serialized_message,
@@ -709,7 +709,7 @@ mod tests {
         // Test new_set_difficulty
         let response = Response::new_set_difficulty_response(
             Some(Id::Number(2)),
-            500,
+            500.0,
             "abc123".to_string(),
             4,
         );

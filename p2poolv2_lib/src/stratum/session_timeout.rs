@@ -85,7 +85,7 @@ mod timeout_test {
         let mut test_time_provider = TestTimeProvider::new(SystemTime::now());
         let connection_time = test_time_provider.now();
 
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0);
         session.subscribed = false;
         session.username = Some("miner".to_string());
         session.connected_at = connection_time;
@@ -102,7 +102,7 @@ mod timeout_test {
         let mut test_time_provider = TestTimeProvider::new(SystemTime::now());
         let connection_time = test_time_provider.now();
 
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.9, None, 0);
         session.subscribed = true;
         session.username = None;
         session.connected_at = connection_time;
@@ -119,7 +119,7 @@ mod timeout_test {
         let mut test_time_provider = TestTimeProvider::new(SystemTime::now());
         let connection_time = test_time_provider.now();
 
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0);
         session.subscribed = true;
         session.username = Some("miner".to_string());
         session.connected_at = connection_time;

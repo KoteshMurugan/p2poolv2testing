@@ -46,9 +46,9 @@ use tracing::{debug, error, info};
 pub struct StratumServer {
     pub hostname: String,
     pub port: u16,
-    pub start_difficulty: u64,
-    pub minimum_difficulty: u64,
-    pub maximum_difficulty: Option<u64>,
+    pub start_difficulty: f64,
+    pub minimum_difficulty: f64,
+    pub maximum_difficulty: Option<f64>,
     pub ignore_difficulty: bool,
     pub validate_addresses: bool,
     pub network: bitcoin::Network,
@@ -64,9 +64,9 @@ pub struct StratumServer {
 pub struct StratumServerBuilder {
     hostname: Option<String>,
     port: Option<u16>,
-    start_difficulty: Option<u64>,
-    minimum_difficulty: Option<u64>,
-    maximum_difficulty: Option<Option<u64>>,
+    start_difficulty: Option<f64>,
+    minimum_difficulty: Option<f64>,
+    maximum_difficulty: Option<Option<f64>>,
     ignore_difficulty: Option<bool>,
     validate_addresses: Option<bool>,
     network: Option<bitcoin::Network>,
@@ -89,17 +89,17 @@ impl StratumServerBuilder {
         self
     }
 
-    pub fn start_difficulty(mut self, start_difficulty: u64) -> Self {
+    pub fn start_difficulty(mut self, start_difficulty: f64) -> Self {
         self.start_difficulty = Some(start_difficulty);
         self
     }
 
-    pub fn minimum_difficulty(mut self, minimum_difficulty: u64) -> Self {
+    pub fn minimum_difficulty(mut self, minimum_difficulty: f64) -> Self {
         self.minimum_difficulty = Some(minimum_difficulty);
         self
     }
 
-    pub fn maximum_difficulty(mut self, maximum_difficulty: Option<u64>) -> Self {
+    pub fn maximum_difficulty(mut self, maximum_difficulty: Option<f64>) -> Self {
         self.maximum_difficulty = Some(maximum_difficulty);
         self
     }

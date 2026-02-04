@@ -55,7 +55,7 @@ pub struct Session<D: DifficultyAdjusterTrait> {
     /// version_mask used in this session, defaults to one provided from config
     pub version_mask: i32,
     /// Difficulty suggested by the client
-    pub suggested_difficulty: Option<u64>,
+    pub suggested_difficulty: Option<f64>,
     /// Instant when the session was created
     pub connected_at: SystemTime,
     /// Instant when the last valid share was submitted
@@ -67,9 +67,9 @@ pub struct Session<D: DifficultyAdjusterTrait> {
 impl<D: DifficultyAdjusterTrait> Session<D> {
     /// Creates a new session with the given minimum difficulty.
     pub fn new(
-        start_difficulty: u64,
-        minimum_difficulty: u64,
-        maximum_difficulty: Option<u64>,
+        start_difficulty: f64,
+        minimum_difficulty: f64,
+        maximum_difficulty: Option<f64>,
         version_mask: i32,
     ) -> Self {
         let id = Session::<D>::generate_id();
@@ -109,12 +109,12 @@ mod tests {
 
     #[test]
     fn test_new_session() {
-        let min_difficulty = 1000;
-        let start_difficulty = 100;
+        let min_difficulty = 1000.0;
+        let start_difficulty = 100.0;
         let session = Session::<DifficultyAdjuster>::new(
             start_difficulty,
             min_difficulty,
-            Some(2000),
+            Some(2000.0),
             0x1fffe000,
         );
 
@@ -163,8 +163,8 @@ mod tests {
 
     #[test]
     fn test_get_current_difficulty() {
-        let session = Session::<DifficultyAdjuster>::new(100, 2000, Some(3000), 0x1fffe000);
+        let session = Session::<DifficultyAdjuster>::new(100.0, 2000.0, Some(3000.0), 0x1fffe000);
 
-        assert_eq!(session.difficulty_adjuster.current_difficulty, 100);
+        assert_eq!(session.difficulty_adjuster.current_difficulty, 100.0);
     }
 }
