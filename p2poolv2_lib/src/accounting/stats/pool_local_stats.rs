@@ -38,7 +38,7 @@ const POOL_STATS_DIR: &str = "pool";
 
 /// Returns true if a worker should be included in filtered output.
 fn is_active_worker(worker: &Worker) -> bool {
-    worker.active && worker.shares_valid_total > 0
+    worker.active && worker.shares_valid_total > 0.0
 }
 
 /// Wrapper for `&HashMap<String, Worker>` that serializes only active workers with shares.
@@ -216,12 +216,12 @@ mod tests {
             start_time: 1234567890,
             lastupdate: Some(1234567890),
             accepted_total: 0,
-            accepted_difficulty_total: 0,
+            accepted_difficulty_total: 0.0,
             rejected_total: 0,
-            best_share: 0,
-            best_share_ever: 0,
+            best_share: 0.0,
+            best_share_ever: 0.0,
             users: HashMap::with_capacity(100),
-            pool_difficulty: 500000,
+            pool_difficulty: 500000.0,
         };
 
         // Save stats
@@ -261,12 +261,12 @@ mod tests {
             start_time: 1234567890,
             lastupdate: Some(1234567890),
             accepted_total: 0,
-            accepted_difficulty_total: 0,
+            accepted_difficulty_total: 0.0,
             rejected_total: 0,
-            best_share: 0,
-            best_share_ever: 0,
+            best_share: 0.0,
+            best_share_ever: 0.0,
             users: HashMap::with_capacity(100),
-            pool_difficulty: 500000,
+            pool_difficulty: 500000.0,
         };
 
         // Save should fail because directory doesn't exist

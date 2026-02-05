@@ -66,7 +66,7 @@ mod tests {
 
         // Create a test user
         let mut user = User::default();
-        user.shares_valid_total = 10;
+        user.shares_valid_total = 10.0;
 
         // Save the user stats
         save_user_stats("test_address", &user, log_dir.to_string()).unwrap();

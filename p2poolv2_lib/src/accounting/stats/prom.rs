@@ -98,7 +98,7 @@ impl PoolMetrics {
                     "worker_shares_valid_total{{btcaddress=\"{}\",workername=\"{}\"}} {}\n",
                     btcaddress,
                     display_name,
-                    worker.shares_valid_total * TWO32
+                    worker.shares_valid_total * TWO32 as f64
                 ));
             }
         }
@@ -172,11 +172,11 @@ mod tests {
     fn test_get_exposition_format() {
         let metrics = PoolMetrics {
             accepted_total: 100,
-            accepted_difficulty_total: 1,
+            accepted_difficulty_total: 1.0,
             rejected_total: 5,
-            best_share: 500,
-            best_share_ever: 500,
-            pool_difficulty: 1000,
+            best_share: 500.0,
+            best_share_ever: 500.0,
+            pool_difficulty: 1000.0,
             start_time: 1234567890,
             lastupdate: Some(1234567900),
             ..Default::default()
@@ -207,26 +207,26 @@ mod tests {
 
         let mut user1 = User {
             last_share_at: 1234567890,
-            shares_valid_total: 42,
-            best_share: 1000,
-            best_share_ever: 2000,
+            shares_valid_total: 42.0,
+            best_share: 1000.0,
+            best_share_ever: 2000.0,
             ..Default::default()
         };
 
         let worker1 = Worker {
             last_share_at: 1234567891,
-            shares_valid_total: 20,
+            shares_valid_total: 20.0,
             active: true,
-            best_share: 800,
-            best_share_ever: 1500,
+            best_share: 800.0,
+            best_share_ever: 1500.0,
         };
 
         let worker2 = Worker {
             last_share_at: 1234567892,
-            shares_valid_total: 22,
+            shares_valid_total: 22.0,
             active: false,
-            best_share: 600,
-            best_share_ever: 0,
+            best_share: 600.0,
+            best_share_ever: 0.0,
         };
 
         user1.workers.insert("worker1".to_string(), worker1);
@@ -300,18 +300,18 @@ mod tests {
 
         let mut user1 = User {
             last_share_at: 1234567890,
-            shares_valid_total: 10,
-            best_share: 500,
-            best_share_ever: 500,
+            shares_valid_total: 10.0,
+            best_share: 500.0,
+            best_share_ever: 500.0,
             ..Default::default()
         };
 
         let worker_with_empty_name = Worker {
             last_share_at: 1234567891,
-            shares_valid_total: 10,
+            shares_valid_total: 10.0,
             active: true,
-            best_share: 500,
-            best_share_ever: 500,
+            best_share: 500.0,
+            best_share_ever: 500.0,
         };
 
         user1.workers.insert("".to_string(), worker_with_empty_name);

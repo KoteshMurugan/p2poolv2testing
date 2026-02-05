@@ -30,6 +30,18 @@ pub enum Error {
     TimeoutError,
 }
 
+// Safety: Error is Send because all its variants contain Send types:
+// - String is Send
+// - std::io::Error is Send
+// - Unit variants are trivially Send
+unsafe impl Send for Error {}
+
+// Safety: Error is Sync because all its variants contain Sync types:
+// - String is Sync
+// - std::io::Error is Sync
+// - Unit variants are trivially Sync
+unsafe impl Sync for Error {}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
