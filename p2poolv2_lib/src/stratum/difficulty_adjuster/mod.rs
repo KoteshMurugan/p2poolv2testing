@@ -100,7 +100,7 @@ pub trait DifficultyAdjusterTrait {
     /// if it changed, and the second element is true if this was the first share.
     fn record_share_submission(
         &mut self,
-        share_diff: u128,
+        share_diff: f64,
         job_id: u64,
         suggested_difficulty: Option<f64>,
         current_timestamp: SystemTime,
@@ -187,7 +187,7 @@ impl DifficultyAdjusterTrait for DifficultyAdjuster {
 
     fn record_share_submission(
         &mut self,
-        share_diff: u128,
+        share_diff: f64,
         job_id: u64,
         suggested_difficulty: Option<f64>,
         current_timestamp: SystemTime,
@@ -476,7 +476,7 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         let (new_diff, is_first) =
-            adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+            adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         assert!(is_first);
         assert!(new_diff.is_none());
@@ -493,12 +493,12 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         // Submit first share to initialize
-        let _ = adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+        let _ = adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         // Submit several shares but less than MIN_SHARES_BEFORE_ADJUST
         for i in 0..(MIN_SHARES_BEFORE_ADJUST - 1) {
             let (new_diff, is_first) = adjuster.record_share_submission(
-                min_diff as u128,
+                min_diff as f64,
                 (i + 2) as u64,
                 None,
                 current_timestamp + Duration::from_secs(i as u64),
@@ -522,7 +522,7 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         // Submit first share to initialize
-        let _ = adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+        let _ = adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         // Force the timestamps to be old enough to trigger adjustment
         let past_time = SystemTime::now() - Duration::from_secs(MIN_SECONDS_BEFORE_ADJUST + 10);
@@ -534,7 +534,7 @@ mod tests {
 
         // Submit a share that should trigger adjustment
         let (new_diff, _) =
-            adjuster.record_share_submission(min_diff as u128, 2, None, current_timestamp);
+            adjuster.record_share_submission(min_diff as f64, 2, None, current_timestamp);
 
         // We expect difficulty to increase because dsps5/bias is higher than the target DRR
         assert!(new_diff.is_some());
@@ -553,12 +553,12 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         // Submit first share
-        let _ = adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+        let _ = adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         for i in 0..24 {
             // Submit 24 shares with 10 seconds interval
             let (new_diff, _) = adjuster.record_share_submission(
-                min_diff as u128,
+                min_diff as f64,
                 (i + 2) as u64,
                 None,
                 current_timestamp + Duration::from_secs(i * 10_u64),
@@ -585,7 +585,7 @@ mod tests {
 
         // Submit a share that should trigger adjustment
         let (new_diff, _) = adjuster.record_share_submission(
-            min_diff as u128,
+            min_diff as f64,
             30,
             None,
             current_timestamp + Duration::from_secs(260),
@@ -607,12 +607,12 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         // Submit first share
-        let _ = adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+        let _ = adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         for i in 0..24 {
             // Submit 24 shares with 10 seconds interval
             let (new_diff, _) = adjuster.record_share_submission(
-                min_diff as u128,
+                min_diff as f64,
                 (i + 2) as u64,
                 None,
                 current_timestamp + Duration::from_secs(i * 10_u64),
@@ -639,7 +639,7 @@ mod tests {
 
         // Submit a share that should trigger adjustment
         let (new_diff, _) = adjuster.record_share_submission(
-            min_diff as u128,
+            min_diff as f64,
             30,
             None,
             current_timestamp + Duration::from_secs(260),
@@ -659,7 +659,7 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         // Submit first share to initialize
-        let _ = adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+        let _ = adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         // Simulate a miner with low performance
         adjuster.difficulty_shares_per_second_5min_window = 100.0; // This should increase the difficulty
@@ -668,7 +668,7 @@ mod tests {
         for i in 1..MIN_SHARES_BEFORE_ADJUST as u64 {
             if i < MIN_SHARES_BEFORE_ADJUST as u64 {
                 let (new_diff, _) = adjuster.record_share_submission(
-                    min_diff as u128,
+                    min_diff as f64,
                     (i + 2) as u64,
                     None,
                     current_timestamp + Duration::from_secs(i * 1_u64),
@@ -677,7 +677,7 @@ mod tests {
             } else {
                 // The last share should trigger adjustment
                 let (new_diff, _) = adjuster.record_share_submission(
-                    min_diff as u128,
+                    min_diff as f64,
                     (i + 2) as u64,
                     None,
                     current_timestamp + Duration::from_secs(i * 1_u64),
@@ -717,7 +717,7 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         // Submit first share to initialize
-        let _ = adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+        let _ = adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         // Set a 30-minute-old first share time to get bias close to 1.0
         let past_time = current_timestamp - Duration::from_secs(1800);
@@ -744,7 +744,7 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         // Submit first share to initialize
-        let _ = adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+        let _ = adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         // Set bias close to 1.0 with an old first share time
         let past_time = current_timestamp - Duration::from_secs(1800);
@@ -768,7 +768,7 @@ mod tests {
         let current_timestamp = SystemTime::now();
 
         // Submit first share to initialize
-        let _ = adjuster.record_share_submission(min_diff as u128, 1, None, current_timestamp);
+        let _ = adjuster.record_share_submission(min_diff as f64, 1, None, current_timestamp);
 
         // Set a first share time that's recent (1 minute ago)
         // This should result in a significant bias effect
