@@ -33,14 +33,14 @@ use serde::{Deserialize, Serialize};
 pub struct Worker {
     /// Timestamp of the last share submitted by the worker, time since epoch in ms
     pub last_share_at: u64,
-    /// Valid share submissions
-    pub shares_valid_total: u64,
+    /// Valid share submissions (using f64 to support fractional difficulty)
+    pub shares_valid_total: f64,
     /// Active state
     pub active: bool,
-    /// Best share in this instance of the server
-    pub best_share: u64,
-    /// Best ever share, loaded from disk on startup
-    pub best_share_ever: u64,
+    /// Best share in this instance of the server (f64 for fractional difficulty)
+    pub best_share: f64,
+    /// Best ever share, loaded from disk on startup (f64 for fractional difficulty)
+    pub best_share_ever: f64,
 }
 
 impl Worker {
@@ -50,7 +50,8 @@ impl Worker {
     }
 
     /// Record a share submission for the worker, updating stats accordingly.
-    pub fn record_share(&mut self, difficulty: u64, truediff: u64, unix_timestamp: u64) {
+    /// Uses f64 for difficulty and truediff to support fractional difficulties below 1.
+    pub fn record_share(&mut self, difficulty: f64, truediff: f64, unix_timestamp: u64) {
         self.last_share_at = unix_timestamp;
         self.shares_valid_total += difficulty;
 
@@ -71,43 +72,65 @@ mod tests {
 
         // Verify default values
         assert_eq!(worker.last_share_at, 0);
-        assert_eq!(worker.shares_valid_total, 0);
+        assert_eq!(worker.shares_valid_total, 0.0);
     }
 
     #[test]
     fn test_record_share_updates_stats() {
         let mut worker = Worker::default();
         let timestamp = 1_650_000_000_000;
-        let difficulty = 1000;
+        let difficulty = 1000.0;
 
         // Initial state
         assert_eq!(worker.last_share_at, 0);
-        assert_eq!(worker.shares_valid_total, 0);
-        assert_eq!(worker.best_share, 0);
-        assert_eq!(worker.best_share_ever, 0);
+        assert_eq!(worker.shares_valid_total, 0.0);
+        assert_eq!(worker.best_share, 0.0);
+        assert_eq!(worker.best_share_ever, 0.0);
         assert!(!worker.active);
 
         // First share
-        worker.record_share(difficulty, 1100, timestamp);
+        worker.record_share(difficulty, 1100.0, timestamp);
 
         assert_eq!(worker.last_share_at, timestamp);
-        assert_eq!(worker.shares_valid_total, 1000);
-        assert_eq!(worker.best_share, 1100);
-        assert_eq!(worker.best_share_ever, 1100);
+        assert_eq!(worker.shares_valid_total, 1000.0);
+        assert_eq!(worker.best_share, 1100.0);
+        assert_eq!(worker.best_share_ever, 1100.0);
         assert!(worker.active);
 
         // New best share
-        worker.record_share(2000, 2200, timestamp + 1000);
+        worker.record_share(2000.0, 2200.0, timestamp + 1000);
         assert_eq!(worker.last_share_at, timestamp + 1000);
-        assert_eq!(worker.shares_valid_total, 3000);
-        assert_eq!(worker.best_share, 2200);
-        assert_eq!(worker.best_share_ever, 2200);
+        assert_eq!(worker.shares_valid_total, 3000.0);
+        assert_eq!(worker.best_share, 2200.0);
+        assert_eq!(worker.best_share_ever, 2200.0);
 
         // Submit a lower difficulty share, best_share and best_share_ever should not change
-        worker.record_share(500, 550, timestamp + 2000);
+        worker.record_share(500.0, 550.0, timestamp + 2000);
         assert_eq!(worker.last_share_at, timestamp + 2000);
-        assert_eq!(worker.shares_valid_total, 3500);
-        assert_eq!(worker.best_share, 2200);
-        assert_eq!(worker.best_share_ever, 2200);
+        assert_eq!(worker.shares_valid_total, 3500.0);
+        assert_eq!(worker.best_share, 2200.0);
+        assert_eq!(worker.best_share_ever, 2200.0);
+    }
+
+    #[test]
+    fn test_record_share_with_fractional_difficulty() {
+        let mut worker = Worker::default();
+        let timestamp = 1_650_000_000_000;
+
+        // Test with fractional difficulty below 1
+        worker.record_share(0.001, 0.0015, timestamp);
+        assert_eq!(worker.shares_valid_total, 0.001);
+        assert_eq!(worker.best_share, 0.0015);
+        assert!(worker.active);
+
+        // Another fractional share
+        worker.record_share(0.0005, 0.0008, timestamp + 1000);
+        assert_eq!(worker.shares_valid_total, 0.0015);
+        assert_eq!(worker.best_share, 0.0015); // unchanged, previous was higher
+
+        // Higher fractional share
+        worker.record_share(0.002, 0.003, timestamp + 2000);
+        assert_eq!(worker.shares_valid_total, 0.0035);
+        assert_eq!(worker.best_share, 0.003);
     }
 }
