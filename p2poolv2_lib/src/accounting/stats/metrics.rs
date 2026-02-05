@@ -229,13 +229,12 @@ impl MetricsActor {
     }
 
     /// Increment worker counts - called after worker has authorised successfully.
+    /// Workers are marked as active immediately upon authorization.
     fn worker_authorized(&mut self, btcaddress: String, workername: String) {
-        self.metrics
-            .users
-            .entry(btcaddress)
-            .or_default()
-            .workers
-            .insert(workername, Worker::default());
+        let user = self.metrics.users.entry(btcaddress).or_default();
+        let worker = user.workers.entry(workername).or_insert_with(Worker::default);
+        // Mark worker as active immediately when they authorize/connect
+        worker.active = true;
     }
 
     /// Decrement pool wide worker counts, if worker found as authorised. Unauthorised workers are not counted.
@@ -627,7 +626,7 @@ mod tests {
             .await;
 
         let metrics = handle.get_metrics().await;
-        // Inactive worker exists in memory
+        // Inactive worker exists in memory but is marked active (just connected)
         assert!(metrics.users.contains_key("user4"));
         assert!(
             metrics
@@ -637,6 +636,8 @@ mod tests {
                 .workers
                 .contains_key("workerD")
         );
+        // Worker is active because they just authorized
+        assert!(metrics.users.get("user4").unwrap().workers.get("workerD").unwrap().active);
         assert_eq!(metrics.accepted_total, 1);
         assert_eq!(metrics.accepted_difficulty_total, 123.0);
         assert_eq!(metrics.rejected_total, 1);
@@ -650,7 +651,7 @@ mod tests {
         );
         assert_eq!(reloaded.accepted_total, metrics.accepted_total);
         assert_eq!(reloaded.rejected_total, metrics.rejected_total);
-        // Inactive workers/users are filtered out when saving to JSON
+        // Workers without shares are filtered out when saving to JSON (any_active_workers checks shares_valid_total > 0)
         assert!(!reloaded.users.contains_key("user4"));
         // Active user1 with worker1 should be present
         assert!(reloaded.users.contains_key("user1"));
@@ -780,5 +781,53 @@ mod tests {
         assert_eq!(user_b.shares_valid_total, 30.0);
         assert_eq!(user_b.best_share, 33.0);
         assert!(user_b.workers.contains_key("workerB1"));
+    }
+
+    #[tokio::test]
+    async fn test_worker_active_on_authorize() {
+        let log_dir = tempfile::tempdir().unwrap();
+        let handle = start_metrics(log_dir.path().to_str().unwrap().to_string())
+            .await
+            .unwrap();
+
+        // Just authorize the worker, no shares submitted yet
+        let _ = handle
+            .increment_worker_count("user1".to_string(), "worker1".to_string())
+            .await;
+
+        let metrics = handle.get_metrics().await;
+        
+        // Worker should exist and be marked as active immediately upon authorization
+        assert!(metrics.users.contains_key("user1"));
+        let user = metrics.users.get("user1").unwrap();
+        assert!(user.workers.contains_key("worker1"));
+        let worker = user.workers.get("worker1").unwrap();
+        assert!(worker.active, "Worker should be active immediately after authorization");
+    }
+
+    #[tokio::test]
+    async fn test_worker_inactive_on_disconnect() {
+        let log_dir = tempfile::tempdir().unwrap();
+        let handle = start_metrics(log_dir.path().to_str().unwrap().to_string())
+            .await
+            .unwrap();
+
+        // Authorize the worker
+        let _ = handle
+            .increment_worker_count("user1".to_string(), "worker1".to_string())
+            .await;
+
+        // Verify worker is active
+        let metrics = handle.get_metrics().await;
+        assert!(metrics.users.get("user1").unwrap().workers.get("worker1").unwrap().active);
+
+        // Disconnect the worker
+        let _ = handle
+            .decrement_worker_count(Some("user1".to_string()), "worker1".to_string())
+            .await;
+
+        // Worker should now be inactive
+        let metrics = handle.get_metrics().await;
+        assert!(!metrics.users.get("user1").unwrap().workers.get("worker1").unwrap().active);
     }
 }
