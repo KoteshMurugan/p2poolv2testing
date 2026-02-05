@@ -146,7 +146,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_authorize_first_time() {
         // Setup
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         let request = SimpleRequest::new_authorize(
             12345,
             "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx".to_string(),
@@ -166,9 +166,9 @@ mod tests {
             notify_tx,
             tracker_handle,
             bitcoinrpc_config,
-            start_difficulty: 1000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 1000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -229,7 +229,7 @@ mod tests {
             "Expected method to be 'mining.set_difficulty'"
         );
         assert_eq!(
-            difficulty_notification.params[0], 1000,
+            difficulty_notification.params[0], 1000.0,
             "Expected difficulty notification to match pool minimum difficulty"
         );
 
@@ -248,7 +248,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_authorize_already_authorized() {
         // Setup
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         session.username = Some("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx".to_string());
         let request = SimpleRequest::new_authorize(
             12345,
@@ -269,9 +269,9 @@ mod tests {
             notify_tx,
             tracker_handle,
             bitcoinrpc_config,
-            start_difficulty: 1000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 1000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -307,7 +307,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_user() {
         let (chain_store_handle, _temp_dir) = setup_test_chain_store_handle(true).await;
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         let btcaddress = "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx";
 
         // Execute
@@ -332,8 +332,8 @@ mod tests {
     async fn test_register_same_user_twice() {
         let (chain_store_handle, _temp_dir) = setup_test_chain_store_handle(true).await;
 
-        let mut session1 = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
-        let mut session2 = Session::<DifficultyAdjuster>::new(2, 2, None, 0x1fffe000);
+        let mut session1 = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
+        let mut session2 = Session::<DifficultyAdjuster>::new(2.0, 2.0, None, 0x1fffe000);
         let btcaddress = "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx";
 
         // Execute - register the same user twice
@@ -355,8 +355,8 @@ mod tests {
     async fn test_register_user_multiple_users() {
         let (chain_store_handle, _temp_dir) = setup_test_chain_store_handle(true).await;
 
-        let mut session1 = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
-        let mut session2 = Session::<DifficultyAdjuster>::new(2, 2, None, 0x1fffe000);
+        let mut session1 = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
+        let mut session2 = Session::<DifficultyAdjuster>::new(2.0, 2.0, None, 0x1fffe000);
         let btcaddress1 = "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx";
         let btcaddress2 = "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7";
 
@@ -386,7 +386,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_authorize_invalid_username_first_attempt() {
         // Setup
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         let request = SimpleRequest::new_authorize(
             12345,
             "invalid_address_format".to_string(),
@@ -407,9 +407,9 @@ mod tests {
             notify_tx,
             tracker_handle,
             bitcoinrpc_config,
-            start_difficulty: 1000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 1000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -485,7 +485,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_authorize_invalid_username_second_attempt() {
         // Setup - session with auth_failed_once already true
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         session.auth_failed_once = true;
         let request = SimpleRequest::new_authorize(
             12345,
@@ -507,9 +507,9 @@ mod tests {
             notify_tx,
             tracker_handle,
             bitcoinrpc_config,
-            start_difficulty: 1000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 1000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,

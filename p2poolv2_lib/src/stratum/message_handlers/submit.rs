@@ -158,7 +158,7 @@ pub(crate) async fn handle_submit<'a, D: DifficultyAdjusterTrait>(
     if meets_session_difficulty {
         let _ = stratum_context
             .metrics
-            .record_share_accepted(stratum_share, truediff as u64)
+            .record_share_accepted(stratum_share, truediff as f64)
             .await;
     } else {
         let _ = stratum_context.metrics.record_share_rejected().await;
@@ -264,7 +264,7 @@ mod handle_submit_tests {
 
     #[tokio::test]
     async fn test_handle_submit_meets_difficulty_should_submit() {
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         let tracker_handle = start_tracker_actor();
 
         let (mock_server, bitcoinrpc_config) = setup_mock_bitcoin_rpc().await;
@@ -304,9 +304,9 @@ mod handle_submit_tests {
             notify_tx,
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config,
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -346,7 +346,7 @@ mod handle_submit_tests {
 
     #[tokio::test]
     async fn test_handle_submit_a_meets_difficulty_should_submit() {
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         let tracker_handle = start_tracker_actor();
 
         let (mock_server, bitcoinrpc_config) = setup_mock_bitcoin_rpc().await;
@@ -387,9 +387,9 @@ mod handle_submit_tests {
             notify_tx,
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config,
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -432,7 +432,7 @@ mod handle_submit_tests {
 
     #[tokio::test]
     async fn test_handle_submit_with_version_rolling_meets_difficulty_should_submit() {
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         let tracker_handle = start_tracker_actor();
 
         let (mock_server, bitcoinrpc_config) = setup_mock_bitcoin_rpc().await;
@@ -473,9 +473,9 @@ mod handle_submit_tests {
             notify_tx,
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config,
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -509,14 +509,14 @@ mod handle_submit_tests {
             let mut mock = MockDifficultyAdjusterTrait::default();
             mock.expect_record_share_submission().returning(
                 |_difficulty, _job_id, _suggested_difficulty, _current_timestamp| {
-                    (Some(12345), false)
+                    (Some(12345.0), false)
                 },
             );
-            mock.expect_get_current_difficulty().returning(|| 1u64);
+            mock.expect_get_current_difficulty().returning(|| 1f64);
             mock
         });
 
-        let mut session = Session::<MockDifficultyAdjusterTrait>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<MockDifficultyAdjusterTrait>::new(1.0, 1.0, None, 0x1fffe000);
         let tracker_handle = start_tracker_actor();
 
         let (mock_server, bitcoinrpc_config) = setup_mock_bitcoin_rpc().await;
@@ -557,9 +557,9 @@ mod handle_submit_tests {
             notify_tx,
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config,
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -580,7 +580,7 @@ mod handle_submit_tests {
                 Message::SetDifficulty(SetDifficultyNotification { method: _, params }),
             ] => {
                 assert_eq!(result, &Some(json!(true)));
-                assert_eq!(params[0], 12345);
+                assert_eq!(params[0], 12345.0);
             }
             _ => panic!("Expected SetDifficultyNotification message"),
         }
@@ -590,7 +590,7 @@ mod handle_submit_tests {
 
     #[tokio::test]
     async fn test_handle_submit_with_unknown_job_id_returns_false() {
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         let tracker_handle = start_tracker_actor();
 
         let (_mock_server, bitcoinrpc_config) = setup_mock_bitcoin_rpc().await;
@@ -619,9 +619,9 @@ mod handle_submit_tests {
             notify_tx,
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config,
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -644,7 +644,7 @@ mod handle_submit_tests {
     #[tokio::test]
     async fn test_handle_submit_with_less_difficulty_than_session_even_if_we_meet_bitcoin_diff_should_increment_rejected()
      {
-        let mut session = Session::<DifficultyAdjuster>::new(10_000, 10_000, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(10_000.0, 10_000.0, None, 0x1fffe000);
         let tracker_handle = start_tracker_actor();
 
         let (mock_server, bitcoinrpc_config) = setup_mock_bitcoin_rpc().await;
@@ -684,9 +684,9 @@ mod handle_submit_tests {
             notify_tx,
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config,
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -727,7 +727,7 @@ mod handle_submit_tests {
 
     #[tokio::test]
     async fn test_handle_submit_duplicate_share_is_rejected() {
-        let mut session = Session::<DifficultyAdjuster>::new(1, 1, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(1.0, 1.0, None, 0x1fffe000);
         let tracker_handle = start_tracker_actor();
 
         let (mock_server, bitcoinrpc_config) = setup_mock_bitcoin_rpc().await;
@@ -768,9 +768,9 @@ mod handle_submit_tests {
             notify_tx: notify_tx.clone(),
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config: bitcoinrpc_config.clone(),
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx: emissions_tx.clone(),
@@ -799,9 +799,9 @@ mod handle_submit_tests {
             notify_tx,
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config,
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: false,
             validate_addresses: true,
             emissions_tx,
@@ -830,7 +830,7 @@ mod handle_submit_tests {
     #[tokio::test]
     async fn test_handle_submit_accepts_low_difficulty_share_when_ignore_difficulty_is_true() {
         // Set high session difficulty (10_000) so the share won't meet it normally
-        let mut session = Session::<DifficultyAdjuster>::new(10_000, 10_000, None, 0x1fffe000);
+        let mut session = Session::<DifficultyAdjuster>::new(10_000.0, 10_000.0, None, 0x1fffe000);
         let tracker_handle = start_tracker_actor();
 
         let (mock_server, bitcoinrpc_config) = setup_mock_bitcoin_rpc().await;
@@ -870,9 +870,9 @@ mod handle_submit_tests {
             notify_tx,
             tracker_handle: tracker_handle.clone(),
             bitcoinrpc_config,
-            start_difficulty: 10000,
-            minimum_difficulty: 1,
-            maximum_difficulty: Some(2),
+            start_difficulty: 10000.0,
+            minimum_difficulty: 1.0,
+            maximum_difficulty: Some(2.0),
             ignore_difficulty: true, // Ignore difficulty check
             validate_addresses: true,
             emissions_tx,
@@ -902,7 +902,7 @@ mod handle_submit_tests {
         assert_eq!(metrics_handle.get_metrics().await.accepted_total, 1);
         assert_eq!(
             metrics_handle.get_metrics().await.accepted_difficulty_total,
-            10000
+            10000.0
         );
         assert_eq!(metrics_handle.get_metrics().await.rejected_total, 0);
     }

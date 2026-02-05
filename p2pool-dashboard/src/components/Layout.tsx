@@ -5,7 +5,8 @@ import {
     Users,
     Database,
     FileStack,
-    Activity
+    Activity,
+    Network
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -15,6 +16,7 @@ interface LayoutProps {
 const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/blockchain', icon: GitBranch, label: 'Blockchain' },
+    { path: '/dag', icon: Network, label: 'DAG View' },
     { path: '/workers', icon: Users, label: 'Workers' },
     { path: '/shares', icon: FileStack, label: 'Shares' },
     { path: '/database', icon: Database, label: 'Database' },
