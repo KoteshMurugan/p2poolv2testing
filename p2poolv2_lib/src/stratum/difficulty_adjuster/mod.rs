@@ -516,9 +516,9 @@ mod tests {
 
     #[test_log::test]
     fn test_difficulty_adjustment_after_minimum_time() {
-        let min_diff = 1;
-        let start_difficulty = 100;
-        let mut adjuster = DifficultyAdjuster::new(start_difficulty, min_diff, Some(100000));
+        let min_diff = 1.0;
+        let start_difficulty = 100.0;
+        let mut adjuster = DifficultyAdjuster::new(start_difficulty, min_diff, Some(100000.0));
         let current_timestamp = SystemTime::now();
 
         // Submit first share to initialize
@@ -547,9 +547,9 @@ mod tests {
 
     #[test_log::test]
     fn test_difficulty_adjustment_with_enough_time_delay_to_trigger_adjustment() {
-        let min_diff = 1;
-        let start_difficulty = 100;
-        let mut adjuster = DifficultyAdjuster::new(start_difficulty, min_diff, Some(100000));
+        let min_diff = 1.0;
+        let start_difficulty = 100.0;
+        let mut adjuster = DifficultyAdjuster::new(start_difficulty, min_diff, Some(100000.0));
         let current_timestamp = SystemTime::now();
 
         // Submit first share
@@ -561,7 +561,7 @@ mod tests {
                 min_diff as u128,
                 (i + 2) as u64,
                 None,
-                current_timestamp + Duration::from_secs(i * 10 as u64),
+                current_timestamp + Duration::from_secs(i * 10_u64),
             );
             match new_diff {
                 Some(diff) => {
@@ -594,16 +594,16 @@ mod tests {
         // We expect difficulty to increase because dsps5/bias is higher than the target DRR
         assert!(new_diff.is_some());
         assert!(new_diff.unwrap() > min_diff);
-        assert_eq!(adjuster.current_difficulty, 30);
+        assert_eq!(adjuster.current_difficulty, 30.0);
         assert_eq!(adjuster.share_submission_difficulty_counter, 0); // Counter should be reset
     }
 
     #[test_log::test]
     fn test_difficulty_adjustment_with_enough_time_delay_to_trigger_adjustment_start_from_100_000()
     {
-        let min_diff = 1;
-        let start_difficulty = 100_000;
-        let mut adjuster = DifficultyAdjuster::new(start_difficulty, min_diff, Some(100000));
+        let min_diff = 1.0;
+        let start_difficulty = 100_000.0;
+        let mut adjuster = DifficultyAdjuster::new(start_difficulty, min_diff, Some(100000.0));
         let current_timestamp = SystemTime::now();
 
         // Submit first share
@@ -615,7 +615,7 @@ mod tests {
                 min_diff as u128,
                 (i + 2) as u64,
                 None,
-                current_timestamp + Duration::from_secs(i * 10 as u64),
+                current_timestamp + Duration::from_secs(i * 10_u64),
             );
             match new_diff {
                 Some(diff) => {
@@ -647,7 +647,7 @@ mod tests {
 
         // We expect difficulty to increase because dsps5/bias is higher than the target DRR
         assert!(new_diff.is_some());
-        assert!(new_diff.unwrap() > min_diff as f64);
+        assert!(new_diff.unwrap() > min_diff);
         assert_eq!(adjuster.current_difficulty, 29990.0);
         assert_eq!(adjuster.share_submission_difficulty_counter, 0); // Counter should be reset
     }
@@ -671,7 +671,7 @@ mod tests {
                     min_diff as u128,
                     (i + 2) as u64,
                     None,
-                    current_timestamp + Duration::from_secs(i * 1 as u64),
+                    current_timestamp + Duration::from_secs(i * 1_u64),
                 );
                 assert!(new_diff.is_none());
             } else {
@@ -680,7 +680,7 @@ mod tests {
                     min_diff as u128,
                     (i + 2) as u64,
                     None,
-                    current_timestamp + Duration::from_secs(i * 1 as u64),
+                    current_timestamp + Duration::from_secs(i * 1_u64),
                 );
                 assert!(new_diff.is_some());
                 assert_eq!(new_diff.unwrap(), 1156.00);
@@ -707,7 +707,7 @@ mod tests {
         // Test cap with suggested difficulty
         let calculated = 500.0;
         let constrained = adjuster.apply_difficulty_constraints(calculated, Some(2000.0));
-        assert_eq!(constrained, 2000);
+        assert_eq!(constrained, 2000.0);
     }
 
     #[test]
