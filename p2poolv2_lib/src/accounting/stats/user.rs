@@ -39,24 +39,24 @@ const INITIAL_WORKER_MAP_CAPACITY: usize = 10;
 pub struct User {
     /// Timestamp of the last share submitted by the user, time since epoch in ms
     pub last_share_at: u64,
-    /// Valid share submissions
-    pub shares_valid_total: u64,
+    /// Valid share submissions (using f64 to support fractional difficulty)
+    pub shares_valid_total: f64,
     /// Workers for the user, we maintain list of disconnected workers for persistent stats
     pub workers: HashMap<String, Worker>,
-    /// Best share in this instance of the server
-    pub best_share: u64,
-    /// Best ever share, loaded from disk on startup
-    pub best_share_ever: u64,
+    /// Best share in this instance of the server (f64 for fractional difficulty)
+    pub best_share: f64,
+    /// Best ever share, loaded from disk on startup (f64 for fractional difficulty)
+    pub best_share_ever: f64,
 }
 
 impl Default for User {
     fn default() -> Self {
         User {
             last_share_at: 0,
-            shares_valid_total: 0,
+            shares_valid_total: 0.0,
             workers: HashMap::with_capacity(INITIAL_WORKER_MAP_CAPACITY),
-            best_share: 0,
-            best_share_ever: 0,
+            best_share: 0.0,
+            best_share_ever: 0.0,
         }
     }
 }
@@ -66,14 +66,14 @@ impl User {
     pub fn any_active_workers(&self) -> bool {
         self.workers
             .values()
-            .any(|w| w.active && w.shares_valid_total > 0)
+            .any(|w| w.active && w.shares_valid_total > 0.0)
     }
 
     /// Returns an iterator over active workers (name, worker) pairs.
     pub fn active_workers(&self) -> impl Iterator<Item = (&String, &Worker)> {
         self.workers
             .iter()
-            .filter(|(_, w)| w.active && w.shares_valid_total > 0)
+            .filter(|(_, w)| w.active && w.shares_valid_total > 0.0)
     }
 
     /// Get a mutable reference to a worker by name, if it exists.
@@ -82,11 +82,12 @@ impl User {
     }
 
     /// Record a share submission for the user, updating stats accordingly.
+    /// Uses f64 for difficulty and truediff to support fractional difficulties below 1.
     pub fn record_share(
         &mut self,
         workername: &str,
-        difficulty: u64,
-        truediff: u64,
+        difficulty: f64,
+        truediff: f64,
         current_time_stamp: u64,
     ) {
         self.last_share_at = current_time_stamp;
@@ -129,67 +130,67 @@ mod tests {
         let mut user = User::default();
 
         // Initial state
-        assert_eq!(user.shares_valid_total, 0);
-        assert_eq!(user.best_share, 0);
-        assert_eq!(user.best_share_ever, 0);
+        assert_eq!(user.shares_valid_total, 0.0);
+        assert_eq!(user.best_share, 0.0);
+        assert_eq!(user.best_share_ever, 0.0);
         assert_eq!(user.workers.len(), 0);
 
         // Record a share
-        let difficulty = 1000;
+        let difficulty = 1000.0;
         let timestamp = 1234567890;
-        user.record_share(worker_name, difficulty, 1100, timestamp);
+        user.record_share(worker_name, difficulty, 1100.0, timestamp);
 
         // User stats updated
-        assert_eq!(user.shares_valid_total, 1000);
+        assert_eq!(user.shares_valid_total, 1000.0);
         assert_eq!(user.last_share_at, timestamp);
-        assert_eq!(user.best_share, 1100);
-        assert_eq!(user.best_share_ever, 1100);
+        assert_eq!(user.best_share, 1100.0);
+        assert_eq!(user.best_share_ever, 1100.0);
         assert_eq!(user.workers.len(), 1);
 
         // Worker stats updated
         let worker = user.workers.get(worker_name).unwrap();
         assert_eq!(worker.last_share_at, timestamp);
-        assert_eq!(worker.shares_valid_total, 1000);
-        assert_eq!(worker.best_share, 1100);
-        assert_eq!(worker.best_share_ever, 1100);
+        assert_eq!(worker.shares_valid_total, 1000.0);
+        assert_eq!(worker.best_share, 1100.0);
+        assert_eq!(worker.best_share_ever, 1100.0);
 
         // Record a lower difficulty share
-        user.record_share(worker_name, 500, 550, timestamp + 1);
-        assert_eq!(user.shares_valid_total, 1500);
-        assert_eq!(user.best_share, 1100); // unchanged
-        assert_eq!(user.best_share_ever, 1100);
+        user.record_share(worker_name, 500.0, 550.0, timestamp + 1);
+        assert_eq!(user.shares_valid_total, 1500.0);
+        assert_eq!(user.best_share, 1100.0); // unchanged
+        assert_eq!(user.best_share_ever, 1100.0);
         let worker = user.workers.get(worker_name).unwrap();
-        assert_eq!(worker.shares_valid_total, 1500);
-        assert_eq!(worker.best_share, 1100);
+        assert_eq!(worker.shares_valid_total, 1500.0);
+        assert_eq!(worker.best_share, 1100.0);
 
         // Record a higher difficulty share
-        user.record_share(worker_name, 2000, 2200, timestamp + 2);
-        assert_eq!(user.shares_valid_total, 3500);
-        assert_eq!(user.best_share, 2200);
-        assert_eq!(user.best_share_ever, 2200);
+        user.record_share(worker_name, 2000.0, 2200.0, timestamp + 2);
+        assert_eq!(user.shares_valid_total, 3500.0);
+        assert_eq!(user.best_share, 2200.0);
+        assert_eq!(user.best_share_ever, 2200.0);
         let worker = user.workers.get(worker_name).unwrap();
-        assert_eq!(worker.shares_valid_total, 3500);
-        assert_eq!(worker.best_share, 2200);
+        assert_eq!(worker.shares_valid_total, 3500.0);
+        assert_eq!(worker.best_share, 2200.0);
     }
 
     #[test]
     fn test_multiple_workers() {
         let mut user = User::default();
 
-        user.record_share("worker1", 100, 110, 1);
-        user.record_share("worker2", 200, 220, 2);
+        user.record_share("worker1", 100.0, 110.0, 1);
+        user.record_share("worker2", 200.0, 220.0, 2);
 
         assert_eq!(user.workers.len(), 2);
 
         let worker1 = user.workers.get("worker1").unwrap();
         let worker2 = user.workers.get("worker2").unwrap();
 
-        assert_eq!(user.best_share, 220);
+        assert_eq!(user.best_share, 220.0);
 
-        assert_eq!(worker1.shares_valid_total, 100);
-        assert_eq!(worker1.best_share, 110);
-        assert_eq!(worker2.shares_valid_total, 200);
-        assert_eq!(worker2.best_share, 220);
+        assert_eq!(worker1.shares_valid_total, 100.0);
+        assert_eq!(worker1.best_share, 110.0);
+        assert_eq!(worker2.shares_valid_total, 200.0);
+        assert_eq!(worker2.best_share, 220.0);
     }
 
     #[test]
@@ -201,11 +202,32 @@ mod tests {
 
         // Add worker
         let worker = user.get_or_add_worker("worker1");
-        assert_eq!(worker.shares_valid_total, 0);
+        assert_eq!(worker.shares_valid_total, 0.0);
 
         // Now should exist
         let worker_mut = user.get_worker_mut("worker1").unwrap();
-        worker_mut.shares_valid_total = 42;
-        assert_eq!(user.workers.get("worker1").unwrap().shares_valid_total, 42);
+        worker_mut.shares_valid_total = 42.0;
+        assert_eq!(user.workers.get("worker1").unwrap().shares_valid_total, 42.0);
+    }
+
+    #[test]
+    fn test_record_share_with_fractional_difficulty() {
+        let mut user = User::default();
+
+        // Test with fractional difficulty below 1
+        user.record_share("worker1", 0.001, 0.0015, 1);
+        assert_eq!(user.shares_valid_total, 0.001);
+        assert_eq!(user.best_share, 0.0015);
+        assert!(user.any_active_workers());
+
+        // Another fractional share
+        user.record_share("worker1", 0.0005, 0.0008, 2);
+        assert_eq!(user.shares_valid_total, 0.0015);
+        assert_eq!(user.best_share, 0.0015); // unchanged
+
+        // Higher fractional share
+        user.record_share("worker1", 0.002, 0.003, 3);
+        assert_eq!(user.shares_valid_total, 0.0035);
+        assert_eq!(user.best_share, 0.003);
     }
 }
