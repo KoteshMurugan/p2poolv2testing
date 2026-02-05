@@ -24,8 +24,8 @@ pplns_ttl_days = 7
 [stratum]
 hostname = "0.0.0.0"
 port = 3333
-start_difficulty = 1
-minimum_difficulty = 1
+start_difficulty = 0.01
+minimum_difficulty = 0.001
 solo_address = "bcrt1qpn57jarvdap8mjesvnfsuehlymw0vmj2qph88l"
 # The bitcoin address to use for first jobs when there are no shares
 bootstrap_address = "bcrt1qpn57jarvdap8mjesvnfsuehlymw0vmj2qph88l"
