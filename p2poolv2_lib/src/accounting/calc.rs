@@ -144,7 +144,7 @@ mod tests {
         let dsps = 0.0;
         let elapsed_time = 12.687505;
         let interval = 300;
-        let difficulty = 1;
+        let difficulty = 1.0;
 
         let new_dsps = decay_time(dsps, difficulty, elapsed_time, interval);
         assert!(
@@ -159,7 +159,7 @@ mod tests {
         let dsps = 9.763938;
         let elapsed_time = 2.147000;
         let interval = 300;
-        let difficulty = 1000;
+        let difficulty = 1000.0;
 
         let new_dsps = decay_time(dsps, difficulty, elapsed_time, interval);
         assert!(
@@ -173,7 +173,7 @@ mod tests {
     fn test_decay_time_handles_zero_elapsed_time() {
         // Test that zero elapsed time doesn't cause NaN
         let dsps = 1.0;
-        let result = decay_time(dsps, 100, 0.0, 60);
+        let result = decay_time(dsps, 100.0, 0.0, 60);
         assert_eq!(
             result, dsps,
             "Should return original dsps when elapsed_time is 0"
@@ -185,7 +185,7 @@ mod tests {
     fn test_decay_time_handles_negative_elapsed_time() {
         // Test that negative elapsed time doesn't cause issues
         let dsps = 1.0;
-        let result = decay_time(dsps, 100, -1.0, 60);
+        let result = decay_time(dsps, 100.0, -1.0, 60);
         assert_eq!(
             result, dsps,
             "Should return original dsps when elapsed_time is negative"
@@ -196,7 +196,7 @@ mod tests {
     #[test]
     fn test_decay_time_handles_nan_input() {
         // Test that NaN input gets handled gracefully
-        let result = decay_time(f64::NAN, 100, 60.0, 60);
+        let result = decay_time(f64::NAN, 100.0, 60.0, 60);
         assert_eq!(result, 0.0, "Should return 0.0 when dsps is NaN");
         assert!(result.is_finite(), "Result should be finite");
     }
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn test_decay_time_handles_infinite_input() {
         // Test that infinite input gets handled gracefully
-        let result = decay_time(f64::INFINITY, 100, 60.0, 60);
+        let result = decay_time(f64::INFINITY, 100.0, 60.0, 60);
         assert_eq!(result, 0.0, "Should return 0.0 when dsps is infinite");
         assert!(result.is_finite(), "Result should be finite");
     }

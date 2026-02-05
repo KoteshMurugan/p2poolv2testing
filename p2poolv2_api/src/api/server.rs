@@ -22,6 +22,9 @@ use axum::{
     middleware::{self},
     routing::get,
 };
+use bitcoin::hashes::Hash;
+
+use bitcoin::BlockHash;
 use chrono::DateTime;
 use p2poolv2_lib::stratum::work::tracker::{JobTracker, parse_coinbase};
 use p2poolv2_lib::{
@@ -30,6 +33,7 @@ use p2poolv2_lib::{
     shares::chain::chain_store_handle::ChainStoreHandle,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::oneshot;
 use tracing::info;
@@ -115,6 +119,45 @@ pub struct ChainInfoResponse {
     pub total_work: String,
     pub uncles: Vec<String>,
     pub network: String,
+}
+
+// ============================================================================
+// DAG API Response Structs
+// ============================================================================
+
+#[derive(Serialize)]
+pub struct DagNode {
+    pub hash: String,
+    pub prev_hash: String,
+    pub uncles: Vec<String>,
+    pub height: u32,
+    pub miner_pubkey: String,
+    pub timestamp: u32,
+    pub is_main_chain: bool,
+    pub is_uncle: bool,
+}
+
+#[derive(Serialize)]
+pub struct DagEdge {
+    pub from: String,
+    pub to: String,
+    pub edge_type: String,
+}
+
+#[derive(Serialize)]
+pub struct DagResponse {
+    pub nodes: Vec<DagNode>,
+    pub edges: Vec<DagEdge>,
+    pub tip_hash: String,
+    pub from_height: u32,
+    pub to_height: u32,
+}
+
+#[derive(Deserialize)]
+pub struct DagQuery {
+    pub from_height: Option<u32>,
+    pub to_height: Option<u32>,
+    pub limit: Option<u32>,
 }
 
 // ============================================================================
@@ -219,6 +262,106 @@ async fn chain_info(
 }
 
 // ============================================================================
+// DAG API Handler
+// ============================================================================
+
+async fn chain_dag(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<DagQuery>,
+) -> Result<Json<DagResponse>, ApiError> {
+    let tip_height = state
+        .chain_store_handle
+        .get_tip_height()
+        .map_err(|e| ApiError::ServerError(e.to_string()))?
+        .unwrap_or(0);
+
+    let limit = params.limit.unwrap_or(50).min(100);
+    let to_height = params.to_height.unwrap_or(tip_height);
+    let from_height = params
+        .from_height
+        .unwrap_or(to_height.saturating_sub(limit));
+
+    let tip = state.chain_store_handle.get_chain_tip();
+    let (_, current_uncles) = state.chain_store_handle.get_chain_tip_and_uncles();
+
+    let mut nodes: Vec<DagNode> = Vec::new();
+    let mut edges: Vec<DagEdge> = Vec::new();
+    let mut seen_hashes: HashSet<String> = HashSet::new();
+
+    for height in from_height..=to_height {
+        if let Ok(shares) = state.chain_store_handle.get_shares_at_height(height) {
+            for (hash, share) in shares {
+                let hash_str = hash.to_string();
+                if seen_hashes.contains(&hash_str) {
+                    continue;
+                }
+                seen_hashes.insert(hash_str.clone());
+
+                let is_main_chain = is_on_main_chain(&state.chain_store_handle, &hash, &tip);
+                let is_uncle = current_uncles.contains(&hash);
+
+                let prev_hash_str = share.header.prev_share_blockhash.to_string();
+                if share.header.prev_share_blockhash != BlockHash::all_zeros() {
+                    edges.push(DagEdge {
+                        from: hash_str.clone(),
+                        to: prev_hash_str.clone(),
+                        edge_type: "parent".to_string(),
+                    });
+                }
+
+                for uncle in &share.header.uncles {
+                    edges.push(DagEdge {
+                        from: hash_str.clone(),
+                        to: uncle.to_string(),
+                        edge_type: "uncle".to_string(),
+                    });
+                }
+
+                nodes.push(DagNode {
+                    hash: hash_str,
+                    prev_hash: prev_hash_str,
+                    uncles: share.header.uncles.iter().map(|u| u.to_string()).collect(),
+                    height,
+                    miner_pubkey: share.header.miner_pubkey.to_string(),
+                    timestamp: share.header.time,
+                    is_main_chain,
+                    is_uncle,
+                });
+            }
+        }
+    }
+
+    Ok(Json(DagResponse {
+        nodes,
+        edges,
+        tip_hash: tip.to_string(),
+        from_height,
+        to_height,
+    }))
+}
+
+fn is_on_main_chain(chain_store: &ChainStoreHandle, hash: &BlockHash, tip: &BlockHash) -> bool {
+    if hash == tip {
+        return true;
+    }
+    let mut current = *tip;
+    for _ in 0..1000 {
+        if &current == hash {
+            return true;
+        }
+        if let Some(share) = chain_store.get_share(&current) {
+            if share.header.prev_share_blockhash == BlockHash::all_zeros() {
+                break;
+            }
+            current = share.header.prev_share_blockhash;
+        } else {
+            break;
+        }
+    }
+    false
+}
+
+// ============================================================================
 // Server Setup
 // ============================================================================
 
@@ -264,6 +407,7 @@ pub async fn start_api_server(
         .route("/chain/total_work", get(total_work))
         .route("/chain/locator", get(chain_locator))
         .route("/chain/info", get(chain_info))
+        .route("/chain/dag", get(chain_dag))
         // Middleware and state
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
@@ -299,11 +443,7 @@ async fn health_check() -> String {
 }
 
 /// Returns pool metrics in grafana exposition format
-///
-/// The exposition also includes parsed coinbase outputs for showing
-/// the current coinbase payout distribution
 async fn metrics(State(state): State<Arc<AppState>>) -> String {
-    //  Get base metrics
     let pool_metrics = state.metrics_handle.get_metrics().await;
     let mut exposition = pool_metrics.get_exposition();
 
@@ -322,7 +462,6 @@ async fn pplns_shares(
     State(state): State<Arc<AppState>>,
     Query(query): Query<PplnsQuery>,
 ) -> Result<Json<Vec<SimplePplnsShare>>, ApiError> {
-    // Convert ISO 8601 strings to Unix timestamps
     let start_time = match query.start_time.as_ref() {
         Some(s) => match DateTime::parse_from_rfc3339(s) {
             Ok(dt) => dt.timestamp() as u64,
@@ -341,7 +480,6 @@ async fn pplns_shares(
             }
         },
         None => {
-            // Default to current time
             let now = chrono::Utc::now();
             now.timestamp() as u64
         }
@@ -359,6 +497,7 @@ async fn pplns_shares(
 
     Ok(Json(shares))
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -383,7 +522,6 @@ mod tests {
             .await
             .unwrap();
 
-        //  Use Signet Addresses
         let address = parse_address(
             "tb1q3udk7r26qs32ltf9nmqrjaaa7tr55qmkk30q5d",
             Network::Signet,
@@ -425,7 +563,6 @@ mod tests {
 
         let pool_signature = b"P2Poolv2";
 
-        // Build outputs
         let outputs = vec![
             TxOut {
                 value: Amount::from_str("49 BTC").unwrap(),
@@ -437,17 +574,15 @@ mod tests {
             },
         ];
 
-        // Manually Construct `coinbase2` Hex
         let mut coinbase2_bytes = Vec::new();
         coinbase2_bytes.push(pool_signature.len() as u8);
         coinbase2_bytes.extend_from_slice(pool_signature);
-        coinbase2_bytes.extend_from_slice(&[0xff, 0xff, 0xff, 0xff]); // Sequence
-        coinbase2_bytes.extend_from_slice(&bitcoin::consensus::serialize(&outputs)); // Outputs
-        coinbase2_bytes.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // LockTime
+        coinbase2_bytes.extend_from_slice(&[0xff, 0xff, 0xff, 0xff]);
+        coinbase2_bytes.extend_from_slice(&bitcoin::consensus::serialize(&outputs));
+        coinbase2_bytes.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]);
 
         let coinbase2_hex = hex::encode(coinbase2_bytes);
 
-        //  Insert Job into Tracker
         let job_id = tracker_handle.get_next_job_id();
         tracker_handle.insert_job(
             Arc::new(template),
@@ -457,11 +592,9 @@ mod tests {
             job_id,
         );
 
-        //  Mock ChainStore
         let _genesis = ShareBlock::build_genesis_for_network(Network::Signet);
         let (chain_store_handle, _temp_dir) = setup_test_chain_store_handle(true).await;
 
-        //  Prepare AppState
         let state = Arc::new(AppState {
             app_config: AppConfig {
                 pool_signature_length: 8,
@@ -478,7 +611,6 @@ mod tests {
 
         println!("{}", response_body);
 
-        //  Verify Output
         assert!(response_body.contains(
             "coinbase_output{index=\"0\",address=\"tb1q3udk7r26qs32ltf9nmqrjaaa7tr55qmkk30q5d\"} 4900000000"
         ));

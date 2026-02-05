@@ -17,5 +17,3 @@
 mod auth;
 pub mod error;
 pub mod server;
-// p2poolv2_lib/src/api/mod.rs
-pub mod blockchain_api;
