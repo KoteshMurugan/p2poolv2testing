@@ -37,18 +37,18 @@ pub struct PoolMetrics {
     pub lastupdate: Option<u64>,
     /// Total number of shares accepted
     pub accepted_total: u64,
-    /// Total difficulty of shares accepted
-    pub accepted_difficulty_total: u64,
+    /// Total difficulty of shares accepted (f64 for fractional difficulty support)
+    pub accepted_difficulty_total: f64,
     /// Total rejected shares
     pub rejected_total: u64,
-    /// Highest difficulty share on this start
-    pub best_share: u64,
-    /// Highest difficulty share across restarts
-    pub best_share_ever: u64,
+    /// Highest difficulty share on this start (f64 for fractional difficulty)
+    pub best_share: f64,
+    /// Highest difficulty share across restarts (f64 for fractional difficulty)
+    pub best_share_ever: f64,
     /// User metrics
     pub users: HashMap<String, User>,
-    /// Current pool difficulty
-    pub pool_difficulty: u64,
+    /// Current pool difficulty (f64 for fractional difficulty)
+    pub pool_difficulty: f64,
 }
 
 impl Default for PoolMetrics {
@@ -56,16 +56,16 @@ impl Default for PoolMetrics {
         Self {
             lastupdate: None,
             accepted_total: 0,
-            accepted_difficulty_total: 0,
+            accepted_difficulty_total: 0.0,
             rejected_total: 0,
             start_time: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-            best_share: 0,
-            best_share_ever: 0,
+            best_share: 0.0,
+            best_share_ever: 0.0,
             users: HashMap::with_capacity(INITIAL_USER_MAP_CAPACITY),
-            pool_difficulty: 0,
+            pool_difficulty: 0.0,
         }
     }
 }
@@ -90,8 +90,8 @@ pub enum MetricsMessage {
     RecordShareAccepted {
         btcaddress: String,
         workername: String,
-        difficulty: u64,
-        truediff: u64,
+        difficulty: f64,
+        truediff: f64,
         response: oneshot::Sender<()>,
     },
     RecordShareRejected {
@@ -200,12 +200,13 @@ impl MetricsActor {
     }
 
     /// Update metrics from accepted share
+    /// Uses f64 for difficulty and truediff to support fractional difficulties below 1
     fn record_share_accepted(
         &mut self,
         btcaddress: String,
         workername: String,
-        difficulty: u64,
-        truediff: u64,
+        difficulty: f64,
+        truediff: f64,
     ) {
         let current_unix_timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -276,17 +277,18 @@ pub struct MetricsHandle {
 
 impl MetricsHandle {
     /// Record an accepted share with the given difficulty
+    /// Uses f64 for truediff to support fractional difficulties below 1
     pub async fn record_share_accepted(
         &self,
         share: SimplePplnsShare,
-        truediff: u64,
+        truediff: f64,
     ) -> Result<(), tokio::sync::oneshot::error::RecvError> {
         let (response_tx, response_rx) = oneshot::channel();
         self.sender
             .send(MetricsMessage::RecordShareAccepted {
                 btcaddress: share.btcaddress.unwrap_or_default(),
                 workername: share.workername.unwrap_or_default(),
-                difficulty: share.difficulty as u64,
+                difficulty: share.difficulty as f64,
                 truediff,
                 response: response_tx,
             })
@@ -420,7 +422,7 @@ mod tests {
     fn test_pool_metrics_default() {
         let metrics = PoolMetrics::default();
         assert!(metrics.lastupdate.is_none());
-        assert!(metrics.best_share == 0);
+        assert!(metrics.best_share == 0.0);
     }
 
     #[tokio::test]
@@ -441,13 +443,13 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                110,
+                110.0,
             )
             .await;
 
         let metrics = handle.get_metrics().await;
         assert!(metrics.lastupdate.is_some());
-        assert_eq!(metrics.best_share, 110);
+        assert_eq!(metrics.best_share, 110.0);
 
         // Test that highest difficulty is updated correctly
         let _ = handle
@@ -462,11 +464,11 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                55,
+                55.0,
             )
             .await;
         let metrics = handle.get_metrics().await;
-        assert_eq!(metrics.best_share, 110);
+        assert_eq!(metrics.best_share, 110.0);
 
         let _ = handle
             .record_share_accepted(
@@ -480,11 +482,45 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                220,
+                220.0,
             )
             .await;
         let metrics = handle.get_metrics().await;
-        assert_eq!(metrics.best_share, 220);
+        assert_eq!(metrics.best_share, 220.0);
+    }
+
+    #[tokio::test]
+    async fn test_record_share_accepted_with_fractional_difficulty() {
+        let log_dir = tempfile::tempdir().unwrap();
+        let handle = start_metrics(log_dir.path().to_str().unwrap().to_string())
+            .await
+            .unwrap();
+        
+        // Test with fractional difficulty below 1
+        let _ = handle
+            .record_share_accepted(
+                SimplePplnsShare {
+                    user_id: 1,
+                    difficulty: 1, // This is the session difficulty as integer, truediff is the actual
+                    btcaddress: Some("user1".to_string()),
+                    workername: Some("worker1".to_string()),
+                    n_time: 1000,
+                    job_id: "test_job".to_string(),
+                    extranonce2: "test_extra".to_string(),
+                    nonce: "test_nonce".to_string(),
+                },
+                0.001, // Fractional truediff
+            )
+            .await;
+
+        let metrics = handle.get_metrics().await;
+        assert_eq!(metrics.best_share, 0.001);
+        assert_eq!(metrics.accepted_total, 1);
+        
+        // Verify worker is active
+        assert!(metrics.users.contains_key("user1"));
+        let user = metrics.users.get("user1").unwrap();
+        assert!(user.any_active_workers());
     }
 
     #[tokio::test]
@@ -521,7 +557,7 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                1100,
+                1100.0,
             )
             .await;
         let _ = handle
@@ -536,7 +572,7 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                2200,
+                2200.0,
             )
             .await;
         let _ = handle.record_share_rejected().await;
@@ -555,7 +591,7 @@ mod tests {
 
         let metrics = handle.get_metrics().await;
         // After commit, the metrics should be reset
-        assert_eq!(metrics.best_share, 2200);
+        assert_eq!(metrics.best_share, 2200.0);
     }
 
     #[tokio::test]
@@ -581,7 +617,7 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                134,
+                134.0,
             )
             .await;
         let _ = handle.record_share_rejected().await;
@@ -602,7 +638,7 @@ mod tests {
                 .contains_key("workerD")
         );
         assert_eq!(metrics.accepted_total, 1);
-        assert_eq!(metrics.accepted_difficulty_total, 123);
+        assert_eq!(metrics.accepted_difficulty_total, 123.0);
         assert_eq!(metrics.rejected_total, 1);
 
         // save and reload metrics to verify persistence
@@ -654,7 +690,7 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                84,
+                84.0,
             )
             .await;
 
@@ -664,8 +700,8 @@ mod tests {
         // Check that worker exists and is active
         assert!(worker.active);
         // Check that user stats are updated
-        assert_eq!(user.shares_valid_total, 77);
-        assert_eq!(user.best_share, 84);
+        assert_eq!(user.shares_valid_total, 77.0);
+        assert_eq!(user.best_share, 84.0);
         assert!(user.last_share_at > 0);
     }
 
@@ -698,7 +734,7 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                11,
+                11.0,
             )
             .await;
         let _ = handle
@@ -713,7 +749,7 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                22,
+                22.0,
             )
             .await;
         let _ = handle
@@ -728,21 +764,21 @@ mod tests {
                     extranonce2: "test_extra".to_string(),
                     nonce: "test_nonce".to_string(),
                 },
-                33,
+                33.0,
             )
             .await;
 
         let metrics = handle.get_metrics().await;
 
         let user_a = metrics.users.get("userA").unwrap();
-        assert_eq!(user_a.shares_valid_total, 30);
-        assert_eq!(user_a.best_share, 22);
+        assert_eq!(user_a.shares_valid_total, 30.0);
+        assert_eq!(user_a.best_share, 22.0);
         assert!(user_a.workers.contains_key("workerA1"));
         assert!(user_a.workers.contains_key("workerA2"));
 
         let user_b = metrics.users.get("userB").unwrap();
-        assert_eq!(user_b.shares_valid_total, 30);
-        assert_eq!(user_b.best_share, 33);
+        assert_eq!(user_b.shares_valid_total, 30.0);
+        assert_eq!(user_b.best_share, 33.0);
         assert!(user_b.workers.contains_key("workerB1"));
     }
 }
