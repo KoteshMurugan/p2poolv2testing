@@ -22,11 +22,14 @@
 
 use crate::accounting::simple_pplns::SimplePplnsShare;
 use crate::shares::share_block::{ShareBlock, ShareHeader};
+use crate::store::column_families::ColumnFamily;
+use crate::store::db_viewer_ops;
 use crate::store::writer::{StoreError, StoreHandle};
 use bitcoin::hashes::Hash;
 use bitcoin::{BlockHash, Work};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
+use std::sync::Arc;
 use tracing::{debug, info};
 
 /// The minimum number of shares that must be on the chain for a share to be considered confirmed
@@ -286,6 +289,40 @@ impl ChainStoreHandle {
         share_block.header.prev_share_blockhash = chain_tip;
         share_block.header.uncles = tips.into_iter().collect();
         share_block
+    }
+
+    // ========================================================================
+    // DATABASE VIEWER METHODS
+    // ========================================================================
+
+    /// Get estimated entry count for a column family
+    pub fn get_cf_entry_count(&self, cf: ColumnFamily) -> Result<u64, String> {
+        let db = Arc::new(self.store_handle.store().get_db());
+        db_viewer_ops::get_cf_entry_count(&db, cf)
+    }
+
+    /// Get estimated size of a column family in bytes
+    pub fn get_cf_size_estimate(&self, cf: ColumnFamily) -> Result<u64, String> {
+        let db = Arc::new(self.store_handle.store().get_db());
+        db_viewer_ops::get_cf_size_estimate(&db, cf)
+    }
+
+    /// List entries from a column family with pagination
+    pub fn list_cf_entries(
+        &self,
+        cf: ColumnFamily,
+        skip: usize,
+        limit: usize,
+        search: Option<&str>,
+    ) -> Result<(Vec<(Vec<u8>, Vec<u8>)>, u64), String> {
+        let db = Arc::new(self.store_handle.store().get_db());
+        db_viewer_ops::list_cf_entries(&db, cf, skip, limit, search)
+    }
+
+    /// Get a specific entry from a column family by key
+    pub fn get_cf_entry(&self, cf: ColumnFamily, key: &str) -> Result<Option<Vec<u8>>, String> {
+        let db = Arc::new(self.store_handle.store().get_db());
+        db_viewer_ops::get_cf_entry(&db, cf, key)
     }
 
     // ========================================================================
