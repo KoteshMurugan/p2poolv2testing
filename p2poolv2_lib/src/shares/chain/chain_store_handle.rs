@@ -297,20 +297,30 @@ impl ChainStoreHandle {
 
     /// Get estimated entry count for a column family
     pub fn get_cf_entry_count(&self, cf: ColumnFamily) -> Result<u64, String> {
-        // Store has db: DB (not Arc<DB>), so we need to get a reference and wrap it
-        // The db_viewer_ops functions expect &Arc<DB> for lifetime management
+        // Store.get_db() returns &DB, but db_viewer_ops expects &Arc<DB>
+        // We need to use the existing DB reference without ownership transfer
+        // Since RocksDB is thread-safe, we can safely pass a raw pointer wrapped in Arc temporarily
         let store = self.store_handle.store();
-        let db_ref = store.db_ref();
-        let db_arc = Arc::new(db_ref);
-        db_viewer_ops::get_cf_entry_count(&db_arc, cf)
+        let db_ref: &rocksdb::DB = store.get_db();
+        // SAFETY: We're creating a temporary Arc from a raw pointer for the duration of this call
+        // The actual DB is owned by Store and will outlive this function call
+        let db_ptr = db_ref as *const rocksdb::DB;
+        let db_arc = unsafe { Arc::from_raw(db_ptr) };
+        let result = db_viewer_ops::get_cf_entry_count(&db_arc, cf);
+        // Prevent Arc from dropping and freeing the DB (it's owned by Store)
+        std::mem::forget(db_arc);
+        result
     }
 
     /// Get estimated size of a column family in bytes
     pub fn get_cf_size_estimate(&self, cf: ColumnFamily) -> Result<u64, String> {
         let store = self.store_handle.store();
-        let db_ref = store.db_ref();
-        let db_arc = Arc::new(db_ref);
-        db_viewer_ops::get_cf_size_estimate(&db_arc, cf)
+        let db_ref: &rocksdb::DB = store.get_db();
+        let db_ptr = db_ref as *const rocksdb::DB;
+        let db_arc = unsafe { Arc::from_raw(db_ptr) };
+        let result = db_viewer_ops::get_cf_size_estimate(&db_arc, cf);
+        std::mem::forget(db_arc);
+        result
     }
 
     /// List entries from a column family with pagination
@@ -322,17 +332,23 @@ impl ChainStoreHandle {
         search: Option<&str>,
     ) -> Result<(Vec<(Vec<u8>, Vec<u8>)>, u64), String> {
         let store = self.store_handle.store();
-        let db_ref = store.db_ref();
-        let db_arc = Arc::new(db_ref);
-        db_viewer_ops::list_cf_entries(&db_arc, cf, skip, limit, search)
+        let db_ref: &rocksdb::DB = store.get_db();
+        let db_ptr = db_ref as *const rocksdb::DB;
+        let db_arc = unsafe { Arc::from_raw(db_ptr) };
+        let result = db_viewer_ops::list_cf_entries(&db_arc, cf, skip, limit, search);
+        std::mem::forget(db_arc);
+        result
     }
 
     /// Get a specific entry from a column family by key
     pub fn get_cf_entry(&self, cf: ColumnFamily, key: &str) -> Result<Option<Vec<u8>>, String> {
         let store = self.store_handle.store();
-        let db_ref = store.db_ref();
-        let db_arc = Arc::new(db_ref);
-        db_viewer_ops::get_cf_entry(&db_arc, cf, key)
+        let db_ref: &rocksdb::DB = store.get_db();
+        let db_ptr = db_ref as *const rocksdb::DB;
+        let db_arc = unsafe { Arc::from_raw(db_ptr) };
+        let result = db_viewer_ops::get_cf_entry(&db_arc, cf, key);
+        std::mem::forget(db_arc);
+        result
     }
 
     // ========================================================================
