@@ -1,24 +1,148 @@
-import { useState } from 'react';
-import { Database, Search, ChevronRight, AlertCircle } from 'lucide-react';
-import { COLUMN_FAMILIES, ColumnFamily } from '../types';
+import { useState, useEffect } from 'react';
+import { Database, Search, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../config';
+
+interface ColumnFamily {
+    name: string;
+    description: string;
+    keyFormat: string;
+    valueFormat: string;
+    entry_count?: number;
+    size_bytes?: number;
+}
+
+interface CFStats {
+    entry_count: number;
+    size_bytes: number;
+    first_key?: string;
+    last_key?: string;
+}
+
+interface CFEntry {
+    key: string;
+    value: string;
+    key_hex: string;
+    value_hex: string;
+}
+
+interface EntriesResponse {
+    entries: CFEntry[];
+    total_count: number;
+    page: number;
+    page_size: number;
+}
 
 export default function RocksDBViewer() {
-    const [selectedCF, setSelectedCF] = useState<ColumnFamily | null>(null);
+    const [columnFamilies, setColumnFamilies] = useState<ColumnFamily[]>([]);
+    const [selectedCF, setSelectedCF] = useState<string | null>(null);
+    const [cfStats, setCfStats] = useState<CFStats | null>(null);
+    const [entries, setEntries] = useState<CFEntry[]>([]);
     const [searchKey, setSearchKey] = useState('');
-    const [searchResult, setSearchResult] = useState<string | null>(null);
+    const [searchResult, setSearchResult] = useState<CFEntry | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [totalEntries, setTotalEntries] = useState(0);
+    const pageSize = 20;
+
+    // Load column families on mount
+    useEffect(() => {
+        loadColumnFamilies();
+    }, []);
+
+    // Load entries when CF is selected or page changes
+    useEffect(() => {
+        if (selectedCF) {
+            loadCFStats(selectedCF);
+            loadEntries(selectedCF, page);
+        }
+    }, [selectedCF, page]);
+
+    const loadColumnFamilies = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await fetch(`${API_BASE_URL}/db/cf`);
+            if (!response.ok) throw new Error('Failed to load column families');
+            const data = await response.json();
+            setColumnFamilies(data.column_families || []);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load data');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const loadCFStats = async (cfName: string) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/db/cf/${cfName}/stats`);
+            if (!response.ok) throw new Error('Failed to load stats');
+            const data = await response.json();
+            setCfStats(data);
+        } catch (err) {
+            console.error('Failed to load CF stats:', err);
+        }
+    };
+
+    const loadEntries = async (cfName: string, pageNum: number) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const skip = (pageNum - 1) * pageSize;
+            const response = await fetch(
+                `${API_BASE_URL}/db/cf/${cfName}/entries?skip=${skip}&limit=${pageSize}`
+            );
+            if (!response.ok) throw new Error('Failed to load entries');
+            const data: EntriesResponse = await response.json();
+            setEntries(data.entries || []);
+            setTotalEntries(data.total_count || 0);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load entries');
+            setEntries([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleSearch = async () => {
         if (!selectedCF || !searchKey.trim()) return;
 
         setIsSearching(true);
-        // Note: This requires implementing a database query endpoint
-        // For now, showing that the endpoint isn't available
-        setTimeout(() => {
-            setSearchResult('Database query endpoint not yet implemented. Add GET /api/db/:cf/:key to your API.');
+        setError(null);
+        setSearchResult(null);
+        
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/db/cf/${selectedCF}/entry/${encodeURIComponent(searchKey)}`
+            );
+            if (!response.ok) {
+                if (response.status === 404) {
+                    setError('Key not found');
+                } else {
+                    throw new Error('Search failed');
+                }
+                return;
+            }
+            const data = await response.json();
+            setSearchResult(data);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Search failed');
+        } finally {
             setIsSearching(false);
-        }, 500);
+        }
     };
+
+    const handleCFSelect = (cfName: string) => {
+        setSelectedCF(cfName);
+        setPage(1);
+        setSearchKey('');
+        setSearchResult(null);
+        setError(null);
+    };
+
+    const selectedCFData = columnFamilies.find(cf => cf.name === selectedCF);
+    const totalPages = Math.ceil(totalEntries / pageSize);
 
     return (
         <div className="space-y-6">
@@ -27,18 +151,15 @@ export default function RocksDBViewer() {
                 <p className="text-slate-400">Browse RocksDB column families and query data</p>
             </div>
 
-            {/* Info Banner */}
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                <div>
-                    <p className="text-blue-400 font-medium">Database API Required</p>
-                    <p className="text-sm text-slate-400 mt-1">
-                        To enable database queries, implement these endpoints in your Rust API:
-                        <code className="ml-2 text-orange-400">GET /api/db/list/:cf</code> and
-                        <code className="ml-2 text-orange-400">GET /api/db/get/:cf/:key</code>
-                    </p>
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                        <p className="text-red-400 font-medium">Error</p>
+                        <p className="text-sm text-slate-400 mt-1">{error}</p>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Column Families List */}
@@ -46,58 +167,79 @@ export default function RocksDBViewer() {
                     <div className="p-4 border-b border-slate-700">
                         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                             <Database className="w-5 h-5 text-orange-400" />
-                            Column Families
+                            Column Families ({columnFamilies.length})
                         </h3>
                     </div>
                     <div className="max-h-[600px] overflow-y-auto">
-                        {COLUMN_FAMILIES.map((cf) => (
-                            <button
-                                key={cf.name}
-                                onClick={() => setSelectedCF(cf)}
-                                className={`w-full flex items-center justify-between p-4 border-b border-slate-700/50 transition-colors ${selectedCF?.name === cf.name
-                                    ? 'bg-orange-500/20 text-orange-400'
-                                    : 'hover:bg-slate-700/50 text-slate-300'
+                        {isLoading && columnFamilies.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <Loader2 className="w-8 h-8 text-slate-400 animate-spin mx-auto" />
+                                <p className="text-slate-400 mt-2">Loading...</p>
+                            </div>
+                        ) : (
+                            columnFamilies.map((cf) => (
+                                <button
+                                    key={cf.name}
+                                    onClick={() => handleCFSelect(cf.name)}
+                                    className={`w-full flex items-center justify-between p-4 border-b border-slate-700/50 transition-colors ${
+                                        selectedCF === cf.name
+                                            ? 'bg-orange-500/20 text-orange-400'
+                                            : 'hover:bg-slate-700/50 text-slate-300'
                                     }`}
-                            >
-                                <div className="text-left">
-                                    <p className="font-mono font-medium">{cf.name}</p>
-                                    <p className="text-xs text-slate-500 mt-1">{cf.description}</p>
-                                </div>
-                                <ChevronRight className={`w-5 h-5 transition-transform ${selectedCF?.name === cf.name ? 'rotate-90' : ''
-                                    }`} />
-                            </button>
-                        ))}
+                                >
+                                    <div className="text-left flex-1">
+                                        <p className="font-mono font-medium">{cf.name}</p>
+                                        <p className="text-xs text-slate-500 mt-1">{cf.description}</p>
+                                    </div>
+                                    <ChevronRight
+                                        className={`w-5 h-5 transition-transform ${
+                                            selectedCF === cf.name ? 'rotate-90' : ''
+                                        }`}
+                                    />
+                                </button>
+                            ))
+                        )}
                     </div>
                 </div>
 
                 {/* Query Panel */}
                 <div className="lg:col-span-2 space-y-4">
-                    {selectedCF ? (
+                    {selectedCF && selectedCFData ? (
                         <>
                             {/* CF Details */}
                             <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
                                 <h3 className="text-lg font-semibold text-white mb-4">
-                                    <span className="text-orange-400 font-mono">{selectedCF.name}</span>
+                                    <span className="text-orange-400 font-mono">{selectedCF}</span>
                                 </h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-sm text-slate-400">Description</p>
-                                        <p className="text-white">{selectedCF.description}</p>
+                                        <p className="text-white">{selectedCFData.description}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-slate-400">Key Format</p>
-                                        <p className="text-cyan-400 font-mono">{selectedCF.keyFormat}</p>
+                                        <p className="text-cyan-400 font-mono">{selectedCFData.keyFormat}</p>
                                     </div>
-                                    <div className="col-span-2">
-                                        <p className="text-sm text-slate-400">Value Format</p>
-                                        <p className="text-green-400 font-mono">{selectedCF.valueFormat}</p>
-                                    </div>
+                                    {cfStats && (
+                                        <>
+                                            <div>
+                                                <p className="text-sm text-slate-400">Entry Count</p>
+                                                <p className="text-green-400 font-mono">{cfStats.entry_count.toLocaleString()}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-400">Size</p>
+                                                <p className="text-green-400 font-mono">
+                                                    {(cfStats.size_bytes / 1024 / 1024).toFixed(2)} MB
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
                             {/* Search */}
                             <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                                <h3 className="text-lg font-semibold text-white mb-4">Query Data</h3>
+                                <h3 className="text-lg font-semibold text-white mb-4">Search by Key</h3>
                                 <div className="flex gap-3">
                                     <div className="flex-1 relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -105,7 +247,7 @@ export default function RocksDBViewer() {
                                             type="text"
                                             value={searchKey}
                                             onChange={(e) => setSearchKey(e.target.value)}
-                                            placeholder={`Enter ${selectedCF.keyFormat}...`}
+                                            placeholder={`Enter ${selectedCFData.keyFormat}...`}
                                             className="w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
                                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                                         />
@@ -113,18 +255,87 @@ export default function RocksDBViewer() {
                                     <button
                                         onClick={handleSearch}
                                         disabled={isSearching || !searchKey.trim()}
-                                        className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                                        className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center gap-2"
                                     >
+                                        {isSearching && <Loader2 className="w-4 h-4 animate-spin" />}
                                         {isSearching ? 'Searching...' : 'Search'}
                                     </button>
                                 </div>
 
                                 {searchResult && (
                                     <div className="mt-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
-                                        <p className="text-sm text-slate-400 mb-2">Result:</p>
-                                        <pre className="text-sm text-slate-300 font-mono whitespace-pre-wrap break-all">
-                                            {searchResult}
+                                        <p className="text-sm text-slate-400 mb-2">Key:</p>
+                                        <pre className="text-sm text-cyan-400 font-mono mb-3 break-all">{searchResult.key}</pre>
+                                        <p className="text-sm text-slate-400 mb-2">Value:</p>
+                                        <pre className="text-sm text-green-400 font-mono whitespace-pre-wrap break-all">
+                                            {searchResult.value}
                                         </pre>
+                                        <details className="mt-3">
+                                            <summary className="text-sm text-slate-400 cursor-pointer">Show Hex</summary>
+                                            <div className="mt-2 space-y-2">
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Key (hex):</p>
+                                                    <pre className="text-xs text-slate-300 font-mono break-all">{searchResult.key_hex}</pre>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Value (hex):</p>
+                                                    <pre className="text-xs text-slate-300 font-mono break-all">{searchResult.value_hex}</pre>
+                                                </div>
+                                            </div>
+                                        </details>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Entries List */}
+                            <div className="bg-slate-800/50 rounded-xl border border-slate-700">
+                                <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold text-white">Recent Entries</h3>
+                                    <span className="text-sm text-slate-400">
+                                        {totalEntries.toLocaleString()} total
+                                    </span>
+                                </div>
+                                <div className="max-h-[400px] overflow-y-auto">
+                                    {isLoading ? (
+                                        <div className="p-8 text-center">
+                                            <Loader2 className="w-8 h-8 text-slate-400 animate-spin mx-auto" />
+                                        </div>
+                                    ) : entries.length === 0 ? (
+                                        <div className="p-8 text-center text-slate-400">
+                                            No entries found
+                                        </div>
+                                    ) : (
+                                        entries.map((entry, idx) => (
+                                            <div key={idx} className="p-4 border-b border-slate-700/50 hover:bg-slate-700/30">
+                                                <p className="text-sm text-slate-400 mb-1">Key:</p>
+                                                <p className="text-cyan-400 font-mono text-sm break-all mb-2">{entry.key}</p>
+                                                <p className="text-sm text-slate-400 mb-1">Value:</p>
+                                                <pre className="text-green-400 font-mono text-xs break-all line-clamp-3">
+                                                    {entry.value}
+                                                </pre>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                {totalPages > 1 && (
+                                    <div className="p-4 border-t border-slate-700 flex items-center justify-between">
+                                        <button
+                                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                                            disabled={page === 1}
+                                            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                                        >
+                                            Previous
+                                        </button>
+                                        <span className="text-slate-400">
+                                            Page {page} of {totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={page === totalPages}
+                                            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                                        >
+                                            Next
+                                        </button>
                                     </div>
                                 )}
                             </div>
