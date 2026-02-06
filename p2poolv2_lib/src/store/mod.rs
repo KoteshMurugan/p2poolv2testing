@@ -31,6 +31,7 @@ pub mod background_tasks;
 mod block_tx_metadata;
 pub mod column_families;
 pub mod dag_store;
+pub mod db_viewer_ops;
 pub mod job_store;
 pub mod organise;
 mod pplns_shares;
