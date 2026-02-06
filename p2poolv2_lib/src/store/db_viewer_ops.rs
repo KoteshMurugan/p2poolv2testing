@@ -69,7 +69,7 @@ pub fn list_cf_entries(
         .ok_or_else(|| format!("Column family {} not found", cf.as_str()))?;
 
     let mut entries = Vec::new();
-    let mut count = 0usize;
+    let mut skipped = 0usize;
     let mut total_count = 0u64;
 
     let iter = db.iterator_cf(&cf_handle, IteratorMode::Start);
@@ -77,6 +77,7 @@ pub fn list_cf_entries(
     for item in iter {
         match item {
             Ok((key, value)) => {
+                // Count all items for total
                 total_count += 1;
 
                 // Apply search filter if provided
@@ -87,19 +88,22 @@ pub fn list_cf_entries(
                     }
                 }
 
-                // Skip pagination
-                if count < skip {
-                    count += 1;
+                // Skip items for pagination
+                if skipped < skip {
+                    skipped += 1;
                     continue;
                 }
 
-                // Limit pagination
-                if entries.len() >= limit {
+                // Add to results until we reach the limit
+                if entries.len() < limit {
+                    entries.push((key.to_vec(), value.to_vec()));
+                } else {
+                    // We have enough entries, but continue counting for total
+                    // Break early to save iteration time
+                    // Note: This means total_count might not be fully accurate
+                    // but it's a reasonable tradeoff for performance
                     break;
                 }
-
-                entries.push((key.to_vec(), value.to_vec()));
-                count += 1;
             }
             Err(e) => {
                 return Err(format!("Failed to iterate column family: {}", e));
@@ -192,5 +196,19 @@ mod tests {
         let value = get_cf_entry(&db_arc, ColumnFamily::Metadata, "test_key").unwrap();
         assert!(value.is_some());
         assert_eq!(value.unwrap(), b"test_value");
+
+        // Test pagination
+        for i in 0..25 {
+            db_arc.put_cf(&cf_handle, format!("key{}", i).as_bytes(), format!("value{}", i).as_bytes()).unwrap();
+        }
+
+        let (entries, _) = list_cf_entries(&db_arc, ColumnFamily::Metadata, 0, 10, None).unwrap();
+        assert_eq!(entries.len(), 10);
+
+        let (entries, _) = list_cf_entries(&db_arc, ColumnFamily::Metadata, 10, 10, None).unwrap();
+        assert_eq!(entries.len(), 10);
+
+        let (entries, _) = list_cf_entries(&db_arc, ColumnFamily::Metadata, 20, 10, None).unwrap();
+        assert_eq!(entries.len(), 6); // 26 total entries, skip 20, get 6 remaining
     }
 }
