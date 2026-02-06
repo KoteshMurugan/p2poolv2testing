@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard.tsx';
 import BlockchainView from './components/BlockchainView.tsx';
 import WorkersTable from './components/WorkersTable.tsx';
 import SharesTable from './components/SharesTable.tsx';
-import RocksDBViewer from './components/RocksDBViewer.tsx';
+import DatabaseBrowser from './components/DatabaseBrowser.tsx';
 import DagVisualization from './components/DagVisualization.tsx';
 
 function App() {
@@ -19,7 +19,7 @@ function App() {
           <Route path="/dag" element={<DagVisualization />} />
           <Route path="/workers" element={<WorkersTable />} />
           <Route path="/shares" element={<SharesTable />} />
-          <Route path="/database" element={<RocksDBViewer />} />
+          <Route path="/database" element={<DatabaseBrowser />} />
         </Routes>
       </Layout>
     </BrowserRouter>
