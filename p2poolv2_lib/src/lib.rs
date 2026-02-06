@@ -15,6 +15,7 @@
 // P2Poolv2. If not, see <https://www.gnu.org/licenses/>.
 
 pub mod accounting;
+pub mod api;
 pub mod cli_commands;
 pub mod command;
 pub mod config;
@@ -27,7 +28,5 @@ pub mod store;
 pub mod stratum;
 pub mod utils;
 
-#[cfg(any(test, feature = "test-utils"))]
+#[cfg(feature = "test-utils")]
 pub mod test_utils;
-
-pub use service::build_service;
