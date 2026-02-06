@@ -26,12 +26,14 @@ use std::fmt;
 #[derive(Debug)]
 pub enum ApiError {
     ServerError(String),
+    NotFound(String),
 }
 
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ApiError::ServerError(msg) => write!(f, "axum server error: {msg}"),
+            ApiError::NotFound(msg) => write!(f, "not found: {msg}"),
         }
     }
 }
@@ -44,6 +46,10 @@ impl IntoResponse for ApiError {
             ApiError::ServerError(msg) => {
                 let body = Json(json!({ "error": msg }));
                 (StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
+            }
+            ApiError::NotFound(msg) => {
+                let body = Json(json!({ "error": msg }));
+                (StatusCode::NOT_FOUND, body).into_response()
             }
         }
     }
