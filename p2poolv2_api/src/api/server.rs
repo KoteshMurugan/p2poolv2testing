@@ -15,6 +15,7 @@
 // P2Poolv2. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::api::auth::auth_middleware;
+use crate::api::db_viewer;
 use crate::api::error::ApiError;
 use axum::{
     Extension, Json, Router,
@@ -408,6 +409,11 @@ pub async fn start_api_server(
         .route("/chain/locator", get(chain_locator))
         .route("/chain/info", get(chain_info))
         .route("/chain/dag", get(chain_dag))
+        // Database viewer endpoints
+        .route("/db/cf", get(db_viewer::list_column_families))
+        .route("/db/cf/{cf}/entries", get(db_viewer::list_cf_entries))
+        .route("/db/cf/{cf}/entry/{key}", get(db_viewer::get_cf_entry))
+        .route("/db/cf/{cf}/stats", get(db_viewer::get_cf_stats))
         // Middleware and state
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
