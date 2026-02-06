@@ -15,5 +15,6 @@
 // P2Poolv2. If not, see <https://www.gnu.org/licenses/>.
 
 mod auth;
+pub mod db_viewer;
 pub mod error;
 pub mod server;
