@@ -29,6 +29,7 @@ use bitcoin::hashes::Hash;
 use bitcoin::{BlockHash, Work};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
+use std::sync::Arc;
 use tracing::{debug, info};
 
 /// The minimum number of shares that must be on the chain for a share to be considered confirmed
@@ -296,14 +297,14 @@ impl ChainStoreHandle {
 
     /// Get estimated entry count for a column family
     pub fn get_cf_entry_count(&self, cf: ColumnFamily) -> Result<u64, String> {
-        let db = self.store_handle.store().get_db();
-        db_viewer_ops::get_cf_entry_count(db, cf)
+        let db = Arc::new(self.store_handle.store().get_db().clone());
+        db_viewer_ops::get_cf_entry_count(&db, cf)
     }
 
     /// Get estimated size of a column family in bytes
     pub fn get_cf_size_estimate(&self, cf: ColumnFamily) -> Result<u64, String> {
-        let db = self.store_handle.store().get_db();
-        db_viewer_ops::get_cf_size_estimate(db, cf)
+        let db = Arc::new(self.store_handle.store().get_db().clone());
+        db_viewer_ops::get_cf_size_estimate(&db, cf)
     }
 
     /// List entries from a column family with pagination
@@ -314,14 +315,14 @@ impl ChainStoreHandle {
         limit: usize,
         search: Option<&str>,
     ) -> Result<(Vec<(Vec<u8>, Vec<u8>)>, u64), String> {
-        let db = self.store_handle.store().get_db();
-        db_viewer_ops::list_cf_entries(db, cf, skip, limit, search)
+        let db = Arc::new(self.store_handle.store().get_db().clone());
+        db_viewer_ops::list_cf_entries(&db, cf, skip, limit, search)
     }
 
     /// Get a specific entry from a column family by key
     pub fn get_cf_entry(&self, cf: ColumnFamily, key: &str) -> Result<Option<Vec<u8>>, String> {
-        let db = self.store_handle.store().get_db();
-        db_viewer_ops::get_cf_entry(db, cf, key)
+        let db = Arc::new(self.store_handle.store().get_db().clone());
+        db_viewer_ops::get_cf_entry(&db, cf, key)
     }
 
     // ========================================================================
