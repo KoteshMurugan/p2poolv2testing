@@ -297,14 +297,20 @@ impl ChainStoreHandle {
 
     /// Get estimated entry count for a column family
     pub fn get_cf_entry_count(&self, cf: ColumnFamily) -> Result<u64, String> {
-        let db = Arc::new(self.store_handle.store().get_db().clone());
-        db_viewer_ops::get_cf_entry_count(&db, cf)
+        // Store has db: DB (not Arc<DB>), so we need to get a reference and wrap it
+        // The db_viewer_ops functions expect &Arc<DB> for lifetime management
+        let store = self.store_handle.store();
+        let db_ref = store.db_ref();
+        let db_arc = Arc::new(db_ref);
+        db_viewer_ops::get_cf_entry_count(&db_arc, cf)
     }
 
     /// Get estimated size of a column family in bytes
     pub fn get_cf_size_estimate(&self, cf: ColumnFamily) -> Result<u64, String> {
-        let db = Arc::new(self.store_handle.store().get_db().clone());
-        db_viewer_ops::get_cf_size_estimate(&db, cf)
+        let store = self.store_handle.store();
+        let db_ref = store.db_ref();
+        let db_arc = Arc::new(db_ref);
+        db_viewer_ops::get_cf_size_estimate(&db_arc, cf)
     }
 
     /// List entries from a column family with pagination
@@ -315,14 +321,18 @@ impl ChainStoreHandle {
         limit: usize,
         search: Option<&str>,
     ) -> Result<(Vec<(Vec<u8>, Vec<u8>)>, u64), String> {
-        let db = Arc::new(self.store_handle.store().get_db().clone());
-        db_viewer_ops::list_cf_entries(&db, cf, skip, limit, search)
+        let store = self.store_handle.store();
+        let db_ref = store.db_ref();
+        let db_arc = Arc::new(db_ref);
+        db_viewer_ops::list_cf_entries(&db_arc, cf, skip, limit, search)
     }
 
     /// Get a specific entry from a column family by key
     pub fn get_cf_entry(&self, cf: ColumnFamily, key: &str) -> Result<Option<Vec<u8>>, String> {
-        let db = Arc::new(self.store_handle.store().get_db().clone());
-        db_viewer_ops::get_cf_entry(&db, cf, key)
+        let store = self.store_handle.store();
+        let db_ref = store.db_ref();
+        let db_arc = Arc::new(db_ref);
+        db_viewer_ops::get_cf_entry(&db_arc, cf, key)
     }
 
     // ========================================================================
