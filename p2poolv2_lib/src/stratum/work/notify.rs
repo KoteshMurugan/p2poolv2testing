@@ -326,7 +326,7 @@ mod tests {
 
         let shares = vec![SimplePplnsShare {
             user_id: 1,
-            difficulty: 100,
+            difficulty: 100.0,
             btcaddress: Some("bcrt1qe2qaq0e8qlp425pxytrakala7725dynwhknufr".to_string()),
             workername: Some("".to_string()),
             n_time,
@@ -413,7 +413,7 @@ mod tests {
 
         let shares = vec![SimplePplnsShare {
             user_id: 1,
-            difficulty: 100,
+            difficulty: 100.0,
             btcaddress: Some("bcrt1qe2qaq0e8qlp425pxytrakala7725dynwhknufr".to_string()),
             workername: Some("".to_string()),
             n_time,
@@ -512,7 +512,7 @@ mod tests {
 
         let shares = vec![SimplePplnsShare {
             user_id: 1,
-            difficulty: 100,
+            difficulty: 100.0,
             btcaddress: Some("bcrt1qe2qaq0e8qlp425pxytrakala7725dynwhknufr".to_string()),
             workername: Some("".to_string()),
             n_time,

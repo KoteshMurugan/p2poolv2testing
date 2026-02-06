@@ -90,7 +90,7 @@ impl Payout {
                 // Process shares from newest to oldest within this batch
                 for share in batch_shares.into_iter() {
                     if accumulated_difficulty < total_difficulty {
-                        accumulated_difficulty += share.difficulty as f64;
+                        accumulated_difficulty += share.difficulty;
                         result_shares.push(share);
                     }
                 }
@@ -194,13 +194,13 @@ impl Payout {
     }
 
     /// Groups shares by bitcoin address and sums their difficulties.
-    fn group_shares_by_address(shares: &[SimplePplnsShare]) -> HashMap<String, u64> {
+    fn group_shares_by_address(shares: &[SimplePplnsShare]) -> HashMap<String, f64> {
         let mut address_difficulty_map = HashMap::new();
         for share in shares {
             if let Some(btcaddress) = &share.btcaddress {
                 *address_difficulty_map
                     .entry(btcaddress.clone())
-                    .or_insert(0) += share.difficulty;
+                    .or_insert(0.0) += share.difficulty;
             }
         }
         address_difficulty_map
@@ -208,11 +208,11 @@ impl Payout {
 
     /// Appends proportional distribution of amount based on difficulty weights to the distribtuion
     fn append_proportional_distribution(
-        address_difficulty_map: HashMap<String, u64>,
+        address_difficulty_map: HashMap<String, f64>,
         total_amount: bitcoin::Amount,
         distribution: &mut Vec<OutputPair>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        let total_difficulty: u64 = address_difficulty_map.values().sum();
+        let total_difficulty: f64 = address_difficulty_map.values().sum();
         let mut distributed_amount = bitcoin::Amount::ZERO;
 
         for (i, (address_str, difficulty)) in address_difficulty_map.iter().enumerate() {
@@ -225,7 +225,7 @@ impl Payout {
                 // Last address gets remainder to handle rounding
                 total_amount - distributed_amount
             } else {
-                let proportion = *difficulty as f64 / total_difficulty as f64;
+                let proportion = *difficulty / total_difficulty;
                 let amount_sats = (total_amount.to_sat() as f64 * proportion).round() as u64;
                 bitcoin::Amount::from_sat(amount_sats)
             };
@@ -256,7 +256,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                400,
+                400.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -266,7 +266,7 @@ mod tests {
             ), // 30 min ago
             SimplePplnsShare::new(
                 2,
-                300,
+                300.0,
                 "addr2".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -276,7 +276,7 @@ mod tests {
             ), // 40 min ago
             SimplePplnsShare::new(
                 3,
-                200,
+                200.0,
                 "addr3".to_string(),
                 "worker3".to_string(),
                 (current_time - 3000) * 1_000_000,
@@ -286,7 +286,7 @@ mod tests {
             ), // 50 min ago
             SimplePplnsShare::new(
                 4,
-                100,
+                100.0,
                 "addr4".to_string(),
                 "worker4".to_string(),
                 (current_time - 3600) * 1_000_000,
@@ -315,8 +315,8 @@ mod tests {
         assert_eq!(result[3].n_time, (current_time - 3600) * 1_000_000); // 60 min ago
 
         // Verify total difficulty
-        let total: u64 = result.iter().map(|s| s.difficulty).sum();
-        assert_eq!(total, 1000);
+        let total: f64 = result.iter().map(|s| s.difficulty).sum();
+        assert_eq!(total, 1000.0);
     }
 
     #[tokio::test]
@@ -332,7 +332,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                400,
+                400.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -342,7 +342,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                300,
+                300.0,
                 "addr2".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -352,7 +352,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 3,
-                200,
+                200.0,
                 "addr3".to_string(),
                 "worker3".to_string(),
                 (current_time - 3000) * 1_000_000,
@@ -362,7 +362,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 4,
-                100,
+                100.0,
                 "addr4".to_string(),
                 "worker4".to_string(),
                 (current_time - 3600) * 1_000_000,
@@ -383,12 +383,12 @@ mod tests {
 
         // Should return first 3 shares (400 + 300 + 200 = 900, which exceeds 750)
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0].difficulty, 400);
-        assert_eq!(result[1].difficulty, 300);
-        assert_eq!(result[2].difficulty, 200);
+        assert_eq!(result[0].difficulty, 400.0);
+        assert_eq!(result[1].difficulty, 300.0);
+        assert_eq!(result[2].difficulty, 200.0);
 
-        let total: u64 = result.iter().map(|s| s.difficulty).sum();
-        assert_eq!(total, 900);
+        let total: f64 = result.iter().map(|s| s.difficulty).sum();
+        assert_eq!(total, 900.0);
     }
 
     #[tokio::test]
@@ -404,7 +404,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                100,
+                100.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -414,7 +414,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                200,
+                200.0,
                 "addr2".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -446,8 +446,8 @@ mod tests {
         // Should return all available shares even though total difficulty (300) < target (500)
         assert_eq!(result.len(), 2);
 
-        let total: u64 = result.iter().map(|s| s.difficulty).sum();
-        assert_eq!(total, 300);
+        let total: f64 = result.iter().map(|s| s.difficulty).sum();
+        assert_eq!(total, 300.0);
     }
 
     #[tokio::test]
@@ -479,7 +479,7 @@ mod tests {
 
         let shares = vec![SimplePplnsShare::new(
             1,
-            1500,
+            1500.0,
             "addr1".to_string(),
             "worker1".to_string(),
             (current_time - 1800) * 1_000_000,
@@ -499,7 +499,7 @@ mod tests {
 
         // Should return the single share even though it exceeds target
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0].difficulty, 1500);
+        assert_eq!(result[0].difficulty, 1500.0);
     }
 
     #[tokio::test]
@@ -517,7 +517,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                100,
+                100.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 (current_time - 50) * 1_000_000,
@@ -527,7 +527,7 @@ mod tests {
             ), // 50s ago
             SimplePplnsShare::new(
                 2,
-                200,
+                200.0,
                 "addr2".to_string(),
                 "worker2".to_string(),
                 (current_time - 150) * 1_000_000,
@@ -537,7 +537,7 @@ mod tests {
             ), // 150s ago
             SimplePplnsShare::new(
                 3,
-                300,
+                300.0,
                 "addr3".to_string(),
                 "worker3".to_string(),
                 (current_time - 250) * 1_000_000,
@@ -547,7 +547,7 @@ mod tests {
             ), // 250s ago
             SimplePplnsShare::new(
                 4,
-                400,
+                400.0,
                 "addr4".to_string(),
                 "worker4".to_string(),
                 (current_time - 350) * 1_000_000,
@@ -583,8 +583,8 @@ mod tests {
         assert_eq!(result[1].n_time, (current_time - 150) * 1_000_000);
         assert_eq!(result[2].n_time, (current_time - 250) * 1_000_000);
 
-        let total: u64 = result.iter().map(|s| s.difficulty).sum();
-        assert_eq!(total, 600);
+        let total: f64 = result.iter().map(|s| s.difficulty).sum();
+        assert_eq!(total, 600.0);
     }
 
     #[tokio::test]
@@ -605,7 +605,7 @@ mod tests {
 
         let shares = vec![SimplePplnsShare::new(
             1,
-            1000,
+            1000.0,
             "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
             "worker1".to_string(),
             (current_time - 1800) * 1_000_000,
@@ -648,7 +648,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                600,
+                600.0,
                 "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -658,7 +658,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                400,
+                400.0,
                 "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -719,7 +719,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                300,
+                300.0,
                 "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -729,7 +729,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 1,
-                200,
+                200.0,
                 "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -739,7 +739,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                500,
+                500.0,
                 "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string(),
                 "worker3".to_string(),
                 (current_time - 3000) * 1_000_000,
@@ -803,7 +803,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                100,
+                100.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 1000,
@@ -813,7 +813,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                200,
+                200.0,
                 "addr2".to_string(),
                 "worker2".to_string(),
                 2000,
@@ -823,7 +823,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 1,
-                300,
+                300.0,
                 "addr1".to_string(),
                 "worker3".to_string(),
                 3000,
@@ -836,8 +836,8 @@ mod tests {
         let result = Payout::group_shares_by_address(&shares);
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result.get("addr1"), Some(&400)); // 100 + 300
-        assert_eq!(result.get("addr2"), Some(&200));
+        assert_eq!(result.get("addr1"), Some(&400.0)); // 100 + 300
+        assert_eq!(result.get("addr2"), Some(&200.0));
     }
 
     #[tokio::test]
@@ -845,11 +845,11 @@ mod tests {
         let mut address_difficulty_map = HashMap::new();
         address_difficulty_map.insert(
             "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
-            600,
+            600.0,
         );
         address_difficulty_map.insert(
             "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string(),
-            400,
+            400.0,
         );
 
         let total_amount = bitcoin::Amount::from_sat(100_000_000); // 1.0 BTC
@@ -880,7 +880,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                600,
+                600.0,
                 "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -890,7 +890,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                400,
+                400.0,
                 "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -969,7 +969,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                600,
+                600.0,
                 "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -979,7 +979,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                400,
+                400.0,
                 "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -1061,7 +1061,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                600,
+                600.0,
                 "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -1071,7 +1071,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                400,
+                400.0,
                 "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -1198,7 +1198,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                600,
+                600.0,
                 "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -1208,7 +1208,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                400,
+                400.0,
                 "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -1284,7 +1284,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                600,
+                600.0,
                 "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -1294,7 +1294,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                400,
+                400.0,
                 "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,
@@ -1350,7 +1350,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                600,
+                600.0,
                 "invalid_username_not_a_btc_address".to_string(),
                 "worker1".to_string(),
                 (current_time - 1800) * 1_000_000,
@@ -1360,7 +1360,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                400,
+                400.0,
                 "another_invalid_name".to_string(),
                 "worker2".to_string(),
                 (current_time - 2400) * 1_000_000,

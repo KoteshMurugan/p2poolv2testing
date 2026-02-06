@@ -27,8 +27,8 @@ pub mod payout;
 pub struct SimplePplnsShare {
     /// Local node user id, used for tracking local pplns
     pub user_id: u64,
-    /// Target difficulty when the share was found
-    pub difficulty: u64,
+    /// Target difficulty when the share was found (f64 to support fractional difficulties)
+    pub difficulty: f64,
     /// btcaddress of the miner, used to track metrics for local node
     #[serde(skip)]
     pub btcaddress: Option<String>,
@@ -48,7 +48,7 @@ pub struct SimplePplnsShare {
 impl SimplePplnsShare {
     pub fn new(
         user_id: u64,
-        difficulty: u64,
+        difficulty: f64,
         btcaddress: String,
         workername: String,
         n_time: u64,
@@ -99,7 +99,7 @@ impl Encodable for SimplePplnsShare {
     ) -> Result<usize, bitcoin::io::Error> {
         let mut len = 0;
         len += self.user_id.consensus_encode(w)?;
-        len += self.difficulty.consensus_encode(w)?;
+        len += self.difficulty.to_bits().consensus_encode(w)?;
         len += self.n_time.consensus_encode(w)?;
         len += self.job_id.consensus_encode(w)?;
         len += self.extranonce2.consensus_encode(w)?;
@@ -115,7 +115,7 @@ impl Decodable for SimplePplnsShare {
     ) -> Result<Self, bitcoin::consensus::encode::Error> {
         Ok(SimplePplnsShare {
             user_id: u64::consensus_decode(r)?,
-            difficulty: u64::consensus_decode(r)?,
+            difficulty: f64::from_bits(u64::consensus_decode(r)?),
             btcaddress: None, // Skip btcaddress - for space optimisation
             workername: None, // Skip workername - for space optimisation
             n_time: u64::consensus_decode(r)?,

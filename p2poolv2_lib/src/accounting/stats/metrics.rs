@@ -232,7 +232,10 @@ impl MetricsActor {
     /// Workers are marked as active immediately upon authorization.
     fn worker_authorized(&mut self, btcaddress: String, workername: String) {
         let user = self.metrics.users.entry(btcaddress).or_default();
-        let worker = user.workers.entry(workername).or_insert_with(Worker::default);
+        let worker = user
+            .workers
+            .entry(workername)
+            .or_insert_with(Worker::default);
         // Mark worker as active immediately when they authorize/connect
         worker.active = true;
     }
@@ -434,7 +437,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 100,
+                    difficulty: 100.0,
                     btcaddress: Some("user1".to_string()),
                     workername: Some("worker1".to_string()),
                     n_time: 1000,
@@ -455,7 +458,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 50,
+                    difficulty: 50.0,
                     btcaddress: Some("user1".to_string()),
                     workername: Some("worker1".to_string()),
                     n_time: 1000,
@@ -473,7 +476,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 200,
+                    difficulty: 200.0,
                     btcaddress: Some("user1".to_string()),
                     workername: Some("worker1".to_string()),
                     n_time: 1000,
@@ -494,13 +497,13 @@ mod tests {
         let handle = start_metrics(log_dir.path().to_str().unwrap().to_string())
             .await
             .unwrap();
-        
+
         // Test with fractional difficulty below 1
         let _ = handle
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 1, // This is the session difficulty as integer, truediff is the actual
+                    difficulty: 1.0, // This is the session difficulty as integer, truediff is the actual
                     btcaddress: Some("user1".to_string()),
                     workername: Some("worker1".to_string()),
                     n_time: 1000,
@@ -515,7 +518,7 @@ mod tests {
         let metrics = handle.get_metrics().await;
         assert_eq!(metrics.best_share, 0.001);
         assert_eq!(metrics.accepted_total, 1);
-        
+
         // Verify worker is active
         assert!(metrics.users.contains_key("user1"));
         let user = metrics.users.get("user1").unwrap();
@@ -548,7 +551,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 1000,
+                    difficulty: 1000.0,
                     btcaddress: Some("user1".to_string()),
                     workername: Some("worker1".to_string()),
                     n_time: 1000,
@@ -563,7 +566,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 2000,
+                    difficulty: 2000.0,
                     btcaddress: Some("user1".to_string()),
                     workername: Some("worker1".to_string()),
                     n_time: 1000,
@@ -608,7 +611,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 123,
+                    difficulty: 123.0,
                     btcaddress: Some("user1".to_string()),
                     workername: Some("worker1".to_string()),
                     n_time: 1000,
@@ -637,7 +640,16 @@ mod tests {
                 .contains_key("workerD")
         );
         // Worker is active because they just authorized
-        assert!(metrics.users.get("user4").unwrap().workers.get("workerD").unwrap().active);
+        assert!(
+            metrics
+                .users
+                .get("user4")
+                .unwrap()
+                .workers
+                .get("workerD")
+                .unwrap()
+                .active
+        );
         assert_eq!(metrics.accepted_total, 1);
         assert_eq!(metrics.accepted_difficulty_total, 123.0);
         assert_eq!(metrics.rejected_total, 1);
@@ -683,7 +695,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 77,
+                    difficulty: 77.0,
                     btcaddress: Some(btcaddress.clone()),
                     workername: Some(workername.clone()),
                     n_time: 3000,
@@ -727,7 +739,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 10,
+                    difficulty: 10.0,
                     btcaddress: Some("userA".to_string()),
                     workername: Some("workerA1".to_string()),
                     n_time: 4000,
@@ -742,7 +754,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 20,
+                    difficulty: 20.0,
                     btcaddress: Some("userA".to_string()),
                     workername: Some("workerA2".to_string()),
                     n_time: 5000,
@@ -757,7 +769,7 @@ mod tests {
             .record_share_accepted(
                 SimplePplnsShare {
                     user_id: 1,
-                    difficulty: 30,
+                    difficulty: 30.0,
                     btcaddress: Some("userB".to_string()),
                     workername: Some("workerB1".to_string()),
                     n_time: 6000,
@@ -796,13 +808,16 @@ mod tests {
             .await;
 
         let metrics = handle.get_metrics().await;
-        
+
         // Worker should exist and be marked as active immediately upon authorization
         assert!(metrics.users.contains_key("user1"));
         let user = metrics.users.get("user1").unwrap();
         assert!(user.workers.contains_key("worker1"));
         let worker = user.workers.get("worker1").unwrap();
-        assert!(worker.active, "Worker should be active immediately after authorization");
+        assert!(
+            worker.active,
+            "Worker should be active immediately after authorization"
+        );
     }
 
     #[tokio::test]
@@ -819,7 +834,16 @@ mod tests {
 
         // Verify worker is active
         let metrics = handle.get_metrics().await;
-        assert!(metrics.users.get("user1").unwrap().workers.get("worker1").unwrap().active);
+        assert!(
+            metrics
+                .users
+                .get("user1")
+                .unwrap()
+                .workers
+                .get("worker1")
+                .unwrap()
+                .active
+        );
 
         // Disconnect the worker
         let _ = handle
@@ -828,6 +852,15 @@ mod tests {
 
         // Worker should now be inactive
         let metrics = handle.get_metrics().await;
-        assert!(!metrics.users.get("user1").unwrap().workers.get("worker1").unwrap().active);
+        assert!(
+            !metrics
+                .users
+                .get("user1")
+                .unwrap()
+                .workers
+                .get("worker1")
+                .unwrap()
+                .active
+        );
     }
 }

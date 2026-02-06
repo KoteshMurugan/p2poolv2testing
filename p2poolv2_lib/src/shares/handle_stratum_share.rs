@@ -138,7 +138,7 @@ mod tests {
     fn create_test_emission_without_commitment() -> Emission {
         let pplns = SimplePplnsShare {
             user_id: 1,
-            difficulty: 1000,
+            difficulty: 1000.0,
             btcaddress: Some("tb1qtest".to_string()),
             workername: Some("worker1".to_string()),
             n_time: 1700000000,
@@ -177,7 +177,7 @@ mod tests {
     fn create_test_emission_with_commitment() -> Emission {
         let pplns = SimplePplnsShare {
             user_id: 1,
-            difficulty: 1000,
+            difficulty: 1000.0,
             btcaddress: Some("tb1qtest".to_string()),
             workername: Some("worker1".to_string()),
             n_time: 1700000000,
@@ -321,7 +321,7 @@ mod tests {
         // Create emission with some bitcoin transactions
         let pplns = SimplePplnsShare {
             user_id: 1,
-            difficulty: 1000,
+            difficulty: 1000.0,
             btcaddress: Some("tb1qtest".to_string()),
             workername: Some("worker1".to_string()),
             n_time: 1700000000,

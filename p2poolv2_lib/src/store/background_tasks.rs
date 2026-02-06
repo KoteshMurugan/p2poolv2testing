@@ -145,7 +145,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 user_id,
-                100,
+                100.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 now - 3600, // 1 hour ago
@@ -155,7 +155,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 user_id,
-                200,
+                200.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 now - 1800, // 30 minutes ago
@@ -165,7 +165,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 user_id,
-                300,
+                300.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 now - 300, // 5 minutes ago
@@ -211,7 +211,7 @@ mod tests {
         // Add a recent share (30 seconds ago)
         let share = SimplePplnsShare::new(
             user_id,
-            100,
+            100.0,
             "addr1".to_string(),
             "worker1".to_string(),
             now - 30,
@@ -262,7 +262,7 @@ mod tests {
         // Add an old share (1 hour ago)
         let old_share = SimplePplnsShare::new(
             user_id,
-            100,
+            100.0,
             "addr1".to_string(),
             "worker1".to_string(),
             now_secs - 3600,

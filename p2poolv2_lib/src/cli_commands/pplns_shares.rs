@@ -82,7 +82,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 1,
-                100,
+                100.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 1000,
@@ -92,7 +92,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 2,
-                200,
+                200.0,
                 "addr2".to_string(),
                 "worker2".to_string(),
                 2000,

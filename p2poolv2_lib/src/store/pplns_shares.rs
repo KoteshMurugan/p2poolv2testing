@@ -143,7 +143,7 @@ mod tests {
         // Create a PPLNS share
         let pplns_share = SimplePplnsShare::new(
             user_id,
-            1,
+            1.0,
             "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_string(),
             "".to_string(),
             1000,
@@ -180,7 +180,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 user_id1,
-                100,
+                100.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 1000,
@@ -190,7 +190,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 user_id2,
-                200,
+                200.0,
                 "addr2".to_string(),
                 "worker2".to_string(),
                 2000,
@@ -200,7 +200,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 user_id3,
-                300,
+                300.0,
                 "addr3".to_string(),
                 "worker3".to_string(),
                 3000,
@@ -232,7 +232,7 @@ mod tests {
         let shares = vec![
             SimplePplnsShare::new(
                 user_id1,
-                100,
+                100.0,
                 "addr1".to_string(),
                 "worker1".to_string(),
                 1000,
@@ -242,7 +242,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 user_id2,
-                200,
+                200.0,
                 "addr2".to_string(),
                 "worker2".to_string(),
                 2000,
@@ -252,7 +252,7 @@ mod tests {
             ),
             SimplePplnsShare::new(
                 user_id3,
-                300,
+                300.0,
                 "addr3".to_string(),
                 "worker3".to_string(),
                 3000,
