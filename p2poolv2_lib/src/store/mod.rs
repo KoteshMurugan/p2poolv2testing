@@ -26,6 +26,7 @@ use std::error::Error;
 use std::sync::{Arc, RwLock};
 use tracing::debug;
 
+mod accessor;
 pub mod background_tasks;
 mod block_tx_metadata;
 pub mod column_families;
