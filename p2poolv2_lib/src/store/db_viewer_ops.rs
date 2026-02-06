@@ -28,11 +28,11 @@ pub fn get_cf_entry_count(
         .ok_or_else(|| format!("Column family {} not found", cf.as_str()))?;
 
     // Approximate count using RocksDB property
-    match db.property_int_value_cf(cf_handle, "rocksdb.estimate-num-keys") {
+    match db.property_int_value_cf(&cf_handle, "rocksdb.estimate-num-keys") {
         Ok(Some(count)) => Ok(count),
         Ok(None) => {
             // Fallback: iterate and count (expensive!)
-            let count = db.iterator_cf(cf_handle, IteratorMode::Start).count();
+            let count = db.iterator_cf(&cf_handle, IteratorMode::Start).count();
             Ok(count as u64)
         }
         Err(e) => Err(format!("Failed to get entry count: {}", e)),
@@ -49,7 +49,7 @@ pub fn get_cf_size_estimate(
         .ok_or_else(|| format!("Column family {} not found", cf.as_str()))?;
 
     // Get approximate size using RocksDB property
-    match db.property_int_value_cf(cf_handle, "rocksdb.estimate-live-data-size") {
+    match db.property_int_value_cf(&cf_handle, "rocksdb.estimate-live-data-size") {
         Ok(Some(size)) => Ok(size),
         Ok(None) => Ok(0),
         Err(e) => Err(format!("Failed to get size estimate: {}", e)),
@@ -72,7 +72,7 @@ pub fn list_cf_entries(
     let mut count = 0usize;
     let mut total_count = 0u64;
 
-    let iter = db.iterator_cf(cf_handle, IteratorMode::Start);
+    let iter = db.iterator_cf(&cf_handle, IteratorMode::Start);
 
     for item in iter {
         match item {
@@ -127,7 +127,7 @@ pub fn get_cf_entry(
         key.as_bytes().to_vec()
     };
 
-    match db.get_cf(cf_handle, &key_bytes) {
+    match db.get_cf(&cf_handle, &key_bytes) {
         Ok(value) => Ok(value.map(|v| v.to_vec())),
         Err(e) => Err(format!("Failed to get entry: {}", e)),
     }
@@ -150,7 +150,7 @@ pub fn delete_cf_entry(
         key.as_bytes().to_vec()
     };
 
-    match db.delete_cf(cf_handle, &key_bytes) {
+    match db.delete_cf(&cf_handle, &key_bytes) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to delete entry: {}", e)),
     }
@@ -181,7 +181,7 @@ mod tests {
 
         // Add test data
         let cf_handle = db_arc.cf_handle("metadata").unwrap();
-        db_arc.put_cf(cf_handle, b"test_key", b"test_value").unwrap();
+        db_arc.put_cf(&cf_handle, b"test_key", b"test_value").unwrap();
 
         // Test list entries
         let (entries, total) = list_cf_entries(&db_arc, ColumnFamily::Metadata, 0, 10, None).unwrap();
