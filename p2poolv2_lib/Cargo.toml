@@ -45,6 +45,10 @@ bitcoindrpc = { path = "../bitcoindrpc" }
 chrono = { workspace = true }
 dashmap = { workspace = true }
 
+# API server dependencies
+axum = { version = "0.7", features = ["macros"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
 [dev-dependencies]
 bitcoindrpc = { path = "../bitcoindrpc", features = ["test-utils"] }
 tempfile.workspace = true
