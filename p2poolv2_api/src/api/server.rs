@@ -40,7 +40,7 @@ use tokio::sync::oneshot;
 use tracing::info;
 
 #[derive(Clone)]
-pub(crate) struct AppState {
+pub struct AppState {
     pub(crate) app_config: AppConfig,
     pub(crate) chain_store_handle: ChainStoreHandle,
     pub(crate) metrics_handle: MetricsHandle,
@@ -397,6 +397,10 @@ pub async fn start_api_server(
 
     let app = Router::new()
         // Health and metrics
+        .route(
+            "/",
+            get(|| async { axum::response::Html(include_str!("../../static/index.html")) }),
+        )
         .route("/health", get(health_check))
         .route("/metrics", get(metrics))
         .route("/pplns_shares", get(pplns_shares))
@@ -411,9 +415,9 @@ pub async fn start_api_server(
         .route("/chain/dag", get(chain_dag))
         // Database viewer endpoints
         .route("/db/cf", get(db_viewer::list_column_families))
-        .route("/db/cf/{cf}/entries", get(db_viewer::list_cf_entries))
-        .route("/db/cf/{cf}/entry/{key}", get(db_viewer::get_cf_entry))
-        .route("/db/cf/{cf}/stats", get(db_viewer::get_cf_stats))
+        .route("/db/cf/:cf/entries", get(db_viewer::list_cf_entries))
+        .route("/db/cf/:cf/entry/:key", get(db_viewer::get_cf_entry))
+        .route("/db/cf/:cf/stats", get(db_viewer::get_cf_stats))
         // Middleware and state
         .layer(middleware::from_fn_with_state(
             app_state.clone(),

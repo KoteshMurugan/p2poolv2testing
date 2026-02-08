@@ -30,8 +30,11 @@ use bitcoin::blockdata::block::Block;
 use bitcoin::hashes::Hash;
 use bitcoindrpc::{BitcoinRpcConfig, BitcoindRpcClient};
 use serde_json::json;
+use std::sync::Mutex;
 use std::time::SystemTime;
+use std::time::{Duration, Instant};
 use tracing::{debug, error, info};
+static LAST_BLOCK_SUBMIT: Mutex<Option<Instant>> = Mutex::new(None);
 
 /// Handle the "mining.submit" message
 /// This function is called when a miner submits a share to the Stratum server.
@@ -110,13 +113,38 @@ pub(crate) async fn handle_submit<'a, D: DifficultyAdjusterTrait>(
     }
 
     if validation_result.meets_bitcoin_difficulty {
-        // Submit block asap - decode transactions only for this rare case
-        let block = build_full_block(
-            validation_result.header,
-            validation_result.coinbase.clone(),
-            &job.blocktemplate,
-        );
-        submit_block(&block, stratum_context.bitcoinrpc_config).await;
+        // Rate limit block submission to simulate mainnet (30 seconds between blocks)
+        let should_submit = {
+            let mut last_submit = LAST_BLOCK_SUBMIT.lock().unwrap();
+
+            if let Some(last_time) = *last_submit {
+                let elapsed = last_time.elapsed();
+                if elapsed < Duration::from_secs(30) {
+                    tracing::info!(
+                        "Skipping block submission - only {:.1}s since last block (target: 30s)",
+                        elapsed.as_secs_f64()
+                    );
+                    false
+                } else {
+                    *last_submit = Some(Instant::now());
+                    true
+                }
+            } else {
+                *last_submit = Some(Instant::now());
+                true // First block
+            }
+            // MutexGuard is dropped here automatically when scope ends
+        };
+
+        if should_submit {
+            tracing::info!("✅ Submitting block to bitcoind");
+            let block = build_full_block(
+                validation_result.header,
+                validation_result.coinbase.clone(),
+                &job.blocktemplate,
+            );
+            submit_block(&block, stratum_context.bitcoinrpc_config).await;
+        }
     }
 
     // Mining difficulties are tracked as `truediffone`, i.e. difficulty is computed relative to mainnet

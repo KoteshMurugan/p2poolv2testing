@@ -206,7 +206,7 @@ impl ShareBlock {
             bitcoin_header: bitcoin_block.header,
             merkle_root,
             time: 1700000000u32,
-            bits: CompactTarget::from_consensus(0x207fffff),
+            bits: CompactTarget::from_consensus(0x1f03e7ff),
         };
         Ok(Self {
             header,
@@ -268,7 +268,7 @@ impl ShareBlock {
             bitcoin_header: compact_block.header,
             merkle_root,
             time: 1700000000u32,
-            bits: CompactTarget::from_consensus(0x207fffff),
+            bits: CompactTarget::from_consensus(0x1f03e7ff),
         };
         Self {
             header,

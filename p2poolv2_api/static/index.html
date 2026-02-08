@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2Pool v2 Database Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .cf-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .cf-card {
+            background: #2a2a2a;
+            border: 2px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cf-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .cf-card.active {
+            border-color: #667eea;
+            background: #333;
+        }
+
+        .cf-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+
+        .cf-description {
+            color: #aaa;
+            font-size: 0.9em;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .cf-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            padding-top: 12px;
+            border-top: 1px solid #3a3a3a;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .data-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #3a3a3a;
+            color: #e0e0e0;
+        }
+
+        tr:hover {
+            background: #2a2a2a;
+        }
+
+        .hash {
+            font-family: 'Courier New', monospace;
+            color: #4CAF50;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-size: 1.1em;
+        }
+
+        .spinner {
+            border: 3px solid #3a3a3a;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .json-view {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🌊 P2Pool v2 Database Viewer</h1>
+            <div class="subtitle">Real-time RocksDB Column Family Explorer</div>
+        </header>
+
+        <div id="cf-list" class="cf-grid">
+            <div class="loading">
+                <div class="spinner"></div>
+                Loading column families...
+            </div>
+        </div>
+
+        <div id="data-viewer" style="display: none;"></div>
+    </div>
+
+    <script>
+        let columnFamilies = [];
+        let currentCF = null;
+
+        // Load column families on page load
+        async function loadColumnFamilies() {
+            try {
+                const response = await fetch('/db/cf');
+                const data = await response.json();
+                columnFamilies = data.column_families;
+                renderColumnFamilies();
+            } catch (error) {
+                console.error('Error loading CFs:', error);
+                document.getElementById('cf-list').innerHTML =
+                    '<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Failed to load column families</h3></div>';
+            }
+        }
+
+        // Render column family cards
+        function renderColumnFamilies() {
+            const cfList = document.getElementById('cf-list');
+            cfList.innerHTML = columnFamilies.map(cf => `
+            <div class="cf-card" onclick="loadCFData('${cf.name}')">
+                <div class="cf-name">${cf.name}</div>
+                <div class="cf-description">${cf.description}</div>
+                <div class="cf-stats">
+                    <div class="stat">
+                        <span class="stat-label">Entries</span>
+                        <span class="stat-value">${cf.estimated_entries}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Key Format</span>
+                        <span class="stat-value">${getShortFormat(cf.key_format)}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        }
+
+        // Get shortened format name
+        function getShortFormat(format) {
+            if (format.includes('32 bytes')) return 'Hash';
+            if (format.includes('u32')) return 'u32';
+            if (format.includes('String')) return 'String';
+            if (format.includes('OutPoint')) return 'OutPoint';
+            return 'Custom';
+        }
+
+        // Load data for a specific column family
+        async function loadCFData(cfName) {
+            currentCF = cfName;
+
+            // Highlight active card
+            document.querySelectorAll('.cf-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            const viewer = document.getElementById('data-viewer');
+            viewer.style.display = 'block';
+            viewer.innerHTML = '<div class="loading"><div class="spinner"></div>Loading data...</div>';
+
+            try {
+                // Load both stats and entries
+                const [statsResponse, entriesResponse] = await Promise.all([
+                    fetch(`/db/cf/${cfName}/stats`),
+                    fetch(`/db/cf/${cfName}/entries`)
+                ]);
+
+                if (!statsResponse.ok || !entriesResponse.ok) {
+                    throw new Error('API request failed');
+                }
+
+                const stats = await statsResponse.json();
+                const entries = await entriesResponse.json();
+
+                renderCFData(cfName, stats, entries);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                viewer.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><h3>Error loading data: ${error.message}</h3></div>`;
+            }
+        }
+
+        // Helper: Try to decode hex string to UTF-8
+        function tryDecodeHex(hexStr) {
+            try {
+                // Remove 0x prefix if present
+                hexStr = hexStr.replace(/^0x/, '');
+
+                // Convert hex to bytes
+                const bytes = [];
+                for (let i = 0; i < hexStr.length; i += 2) {
+                    bytes.push(parseInt(hexStr.substr(i, 2), 16));
+                }
+
+                // Try to decode as UTF-8
+                const decoder = new TextDecoder('utf-8', { fatal: false });
+                const text = decoder.decode(new Uint8Array(bytes));
+
+                // Check if it's printable (mostly ASCII)
+                const isPrintable = text.split('').every(c => {
+                    const code = c.charCodeAt(0);
+                    return code >= 32 && code < 127 || code === 10 || code === 13;
+                });
+
+                if (isPrintable && text.length > 0) {
+                    return text;
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+            return null;
+        }
+
+        // Helper: Parse value based on column family
+        function parseValue(cfName, hexValue) {
+            // For user CF, try to extract readable data
+            if (cfName === 'user') {
+                const decoded = tryDecodeHex(hexValue);
+                if (decoded) {
+                    return { raw: hexValue, decoded: decoded };
+                }
+            }
+
+            return { raw: hexValue };
+        }
+
+        // Render column family data
+        function renderCFData(cfName, stats, entries) {
+            const viewer = document.getElementById('data-viewer');
+            const cf = columnFamilies.find(c => c.name === cfName);
+
+            let html = `
+            <div class="data-section">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">${cfName}</div>
+                        <div style="color: #888; margin-top: 5px;">${cf.description}</div>
+                    </div>
+                    <button class="refresh-btn" onclick="loadCFData('${cfName}')">🔄 Refresh</button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: #1a1a1a; padding: 15px; border-radius: 5px;">
+                        <div style="color: #888; font-size: 0.85em; margin-bottom: 5px;">Total Entries</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: #4CAF50;">${stats.total_entries}</div>
+                    </div>
+                    <div style="background: #1a1a1a; padding: 15px; border-radius: 5px;">
+                        <div style="color: #888; font-size: 0.85em; margin-bottom: 5px;">Estimated Size</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: #667eea;">${formatBytes(stats.estimated_size_bytes)}</div>
+                    </div>
+                    <div style="background: #1a1a1a; padding: 15px; border-radius: 5px;">
+                        <div style="color: #888; font-size: 0.85em; margin-bottom: 5px;">Key Format</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #fff; margin-top: 8px;">${cf.key_format}</div>
+                    </div>
+                    <div style="background: #1a1a1a; padding: 15px; border-radius: 5px;">
+                        <div style="color: #888; font-size: 0.85em; margin-bottom: 5px;">Value Format</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #fff; margin-top: 8px;">${cf.value_format}</div>
+                    </div>
+                </div>
+        `;
+
+            if (entries.entries && entries.entries.length > 0) {
+                html += renderTable(cfName, entries.entries);
+
+                // Show pagination info
+                if (entries.has_more) {
+                    html += `<div style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 5px; text-align: center;">
+                    <p style="color: #888;">Showing ${entries.entries.length} of ${entries.total_entries} entries (Page ${entries.page})</p>
+                    <p style="color: #667eea; margin-top: 10px;">💡 More entries available. Use the API for pagination.</p>
+                </div>`;
+                }
+            } else {
+                html += '<div class="empty-state"><div class="empty-state-icon">📭</div><h3>No entries in this column family</h3></div>';
+            }
+
+            html += '</div>';
+            viewer.innerHTML = html;
+            viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Render table based on column family type
+        function renderTable(cfName, entries) {
+            let html = '<div style="overflow-x: auto;"><table>';
+
+            // Different table structures for different column families
+            switch (cfName) {
+                case 'block':
+                    html += '<thead><tr><th>Block Hash</th><th>Size</th><th>Raw Value (Hex)</th></tr></thead><tbody>';
+                    entries.forEach(entry => {
+                        html += `<tr>
+                        <td><span class="hash">${truncateHash(entry.key)}</span></td>
+                        <td>${entry.size || 0} bytes</td>
+                        <td><details><summary>View Hex Data</summary><div class="json-view">${entry.value.substring(0, 500)}${entry.value.length > 500 ? '...' : ''}</div></details></td>
+                    </tr>`;
+                    });
+                    break;
+
+                case 'user':
+                    html += '<thead><tr><th>User Key</th><th>Size</th><th>Raw Data</th><th>Decoded</th></tr></thead><tbody>';
+                    entries.forEach(entry => {
+                        const decoded = tryDecodeHex(entry.value);
+                        html += `<tr>
+                        <td><span class="hash">${entry.key}</span></td>
+                        <td>${entry.size || 0} bytes</td>
+                        <td><span class="hash">${truncateHash(entry.value)}</span></td>
+                        <td>${decoded ? `<code style="color: #4CAF50;">${decoded}</code>` : '<span style="color: #888;">Binary data</span>'}</td>
+                    </tr>`;
+                    });
+                    break;
+
+                case 'block_height':
+                case 'block_index':
+                    html += '<thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>';
+                    entries.forEach(entry => {
+                        html += `<tr>
+                        <td><span class="hash">${entry.key}</span></td>
+                        <td><span class="hash">${entry.value}</span></td>
+                    </tr>`;
+                    });
+                    break;
+
+                case 'share':
+                case 'job':
+                    html += '<thead><tr><th>ID</th><th>Size</th><th>Raw Data</th></tr></thead><tbody>';
+                    entries.forEach(entry => {
+                        html += `<tr>
+                        <td><span class="hash">${truncateHash(entry.key)}</span></td>
+                        <td>${entry.size || 0} bytes</td>
+                        <td><details><summary>View Hex</summary><div class="json-view">${entry.value.substring(0, 500)}${entry.value.length > 500 ? '...' : ''}</div></details></td>
+                    </tr>`;
+                    });
+                    break;
+
+                default:
+                    // Generic key-value display with hex
+                    html += '<thead><tr><th>Key</th><th>Size</th><th>Value (Hex)</th></tr></thead><tbody>';
+                    entries.forEach(entry => {
+                        html += `<tr>
+                        <td><span class="hash">${truncateHash(entry.key)}</span></td>
+                        <td>${entry.size || 0} bytes</td>
+                        <td><details><summary>View Data</summary><div class="json-view">${entry.value.substring(0, 500)}${entry.value.length > 500 ? '...' : ''}</div></details></td>
+                    </tr>`;
+                    });
+            }
+
+            html += '</tbody></table></div>';
+            return html;
+        }
+
+        // Helper: Truncate hash for display
+        function truncateHash(hash) {
+            const str = String(hash);
+            if (str.length > 20) {
+                return str.substring(0, 10) + '...' + str.substring(str.length - 8);
+            }
+            return str;
+        }
+
+        // Helper: Format bytes
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Initialize
+        loadColumnFamilies();
+
+        // Auto-refresh every 30 seconds if a CF is selected
+        setInterval(() => {
+            if (currentCF) {
+                loadCFData(currentCF);
+            }
+        }, 30000);
+    </script>
+
+</body>
+
+</html>
